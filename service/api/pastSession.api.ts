@@ -13,13 +13,11 @@ import {
 } from "firebase/firestore";
 import { db } from "../config/firebase.config";
 
-export interface LiveSession {
+export interface PastSession {
     id?: string;
-    mentor_name: string;
     user_id: string[];
     is_free: boolean;
     name: string;
-    description: string;
     meeting_link: string;
     video_url?: string;
     banner_url?: string;
@@ -31,15 +29,13 @@ export interface LiveSession {
     updatedAt: any;
 }
 
-export const addSession = async (sessionData: LiveSession) => {
+export const addSession = async (sessionData: PastSession) => {
   try {
-    // Create the document in live_sessions collection
-    const docRef = await addDoc(collection(db, "live_sessions"), {
-      mentor_name: sessionData.mentor_name,
+    // Create the document in past_sessions collection
+    const docRef = await addDoc(collection(db, "past_sessions"), {
       user_id: sessionData.user_id || [],
       is_free: sessionData.is_free,
       name: sessionData.name,
-      description: sessionData.description,
       meeting_link: sessionData.meeting_link,
       video_url: sessionData.video_url || "",
       banner_url: sessionData.banner_url || "",
@@ -54,11 +50,9 @@ export const addSession = async (sessionData: LiveSession) => {
     // Return the created session data
     return {
       id: docRef.id,
-      mentor_name: sessionData.mentor_name,
       user_id: sessionData.user_id || [],
       is_free: sessionData.is_free,
       name: sessionData.name,
-      description: sessionData.description,
       meeting_link: sessionData.meeting_link,
       video_url: sessionData.video_url || "",
       banner_url: sessionData.banner_url || "",
@@ -77,7 +71,7 @@ export const addSession = async (sessionData: LiveSession) => {
 
 export const getSessions = async (searchQuery: string = "") => {
   try {
-    const sessionsRef = collection(db, "live_sessions");
+    const sessionsRef = collection(db, "past_sessions");
     let q;
 
     if (searchQuery && searchQuery.trim() !== "") {
@@ -100,7 +94,7 @@ export const getSessions = async (searchQuery: string = "") => {
     const sessions = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    })) as LiveSession[];
+    })) as PastSession[];
 
     return {
       data: sessions,
@@ -113,14 +107,12 @@ export const getSessions = async (searchQuery: string = "") => {
 
 export const updateSession = async (sessionId: string, updateData: any) => {
   try {
-    const sessionRef = doc(db, "live_sessions", sessionId);
+    const sessionRef = doc(db, "past_sessions", sessionId);
 
     await updateDoc(sessionRef, {
-      mentor_name: updateData.mentor_name,
       user_id: updateData.user_id,
       is_free: updateData.is_free,
       name: updateData.name,
-      description: updateData.description,
       meeting_link: updateData.meeting_link,
       video_url: updateData.video_url,
       banner_url: updateData.banner_url,
@@ -138,7 +130,7 @@ export const updateSession = async (sessionId: string, updateData: any) => {
 
 export const deleteSession = async (sessionId: string) => {
   try {
-    const sessionRef = doc(db, "live_sessions", sessionId);
+    const sessionRef = doc(db, "past_sessions", sessionId);
     await updateDoc(sessionRef, {
       isActive: false,
       updatedAt: new Date().toISOString(),

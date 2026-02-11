@@ -72,7 +72,7 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
         subject: note.subject_id || "",
         topic: note.topic_id || "",
         title: note.title || "",
-        file: note.pdf_url || "",
+        file: note.pdf_url || note.html_url || "",
       });
 
       // If there's a subject, fetch its topics
@@ -90,7 +90,10 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
     try {
       const values = await form.validateFields();
 
-      // If there's a file to upload, upload it first
+      let pdfUrl = "";
+      let htmlUrl = "";
+
+      // Handle file upload
       if (fileList.length > 0 && fileList[0].originFileObj) {
         setIsUploading(true);
         try {
@@ -98,24 +101,54 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
             fileList[0].originFileObj,
             "notes"
           );
-          values.pdf_url = fileUrl; // Update file URL with uploaded file
+          
+          // Determine if it's PDF or HTML based on file type or extension
+          const file = fileList[0].originFileObj;
+          const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf');
+          const isHtml = file.type === "text/html" || file.name.toLowerCase().endsWith('.html');
+
+          if (isPdf) {
+            pdfUrl = fileUrl;
+          } else if (isHtml) {
+            htmlUrl = fileUrl;
+          } else {
+            message.error("Unknown file type");
+            return;
+          }
         } catch (error) {
           console.error("Error uploading file:", error);
           message.error("Failed to upload file. Please try again.");
-          return; // Don't proceed if file upload fails
+          return;
         } finally {
           setIsUploading(false);
         }
       } else if (currentFileUrl) {
-        // If no new file was uploaded, keep the existing URL
-        values.pdf_url = currentFileUrl;
+        // Keep the existing URL
+        // Determine if it's PDF or HTML based on URL extension or existing note data
+        const url = currentFileUrl.trim();
+        if (url.toLowerCase().endsWith('.pdf')) {
+          pdfUrl = url;
+        } else if (url.toLowerCase().endsWith('.html')) {
+          htmlUrl = url;
+        } else {
+          // If can't determine from URL, check existing note data
+          if (note?.pdf_url && note.pdf_url === url) {
+            pdfUrl = url;
+          } else if (note?.html_url && note.html_url === url) {
+            htmlUrl = url;
+          } else {
+            message.error("Please specify whether this is a PDF or HTML link by including .pdf or .html in the URL");
+            return;
+          }
+        }
       }
 
       const updatedValues = {
         subject_id: values.subject,
         topic_id: values.topic,
         title: values.title,
-        pdf_url: values.pdf_url,
+        pdf_url: pdfUrl,
+        html_url: htmlUrl,
       };
 
       onSave({ ...updatedValues, id: note?.document_id });
@@ -151,6 +184,8 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
   useEffect(() => {
     if (note?.pdf_url) {
       setCurrentFileUrl(note.pdf_url);
+    } else if (note?.html_url) {
+      setCurrentFileUrl(note.html_url);
     }
   }, [note]);
 
@@ -234,16 +269,16 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
           />
         </Form.Item>
 
-        {/* FILE LINK + UPLOAD BUTTON */}
+        {/* FILE UPLOAD */}
         <Form.Item
           name="file"
-          label="PDF File (Link or Upload)"
+          label="File (PDF or HTML)"
           rules={[
             {
               validator: (_, value) => {
                 if (!value && fileList.length === 0 && !currentFileUrl) {
                   return Promise.reject(
-                    "Please add a PDF link or upload a file"
+                    "Please upload a file or provide a link"
                   );
                 }
                 return Promise.resolve();
@@ -254,7 +289,7 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
         >
           <div className="space-y-3">
             <Input
-              placeholder="Or paste PDF link here"
+              placeholder="Or paste file link here (PDF or HTML)"
               style={{
                 height: 45,
                 borderRadius: 8,
@@ -273,8 +308,11 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
 
             <Upload.Dragger
               beforeUpload={(file) => {
-                if (file.type !== "application/pdf") {
-                  message.error("You can only upload PDF files!");
+                const isPdf = file.type === "application/pdf";
+                const isHtml = file.type === "text/html" || file.name.toLowerCase().endsWith('.html');
+                
+                if (!isPdf && !isHtml) {
+                  message.error("You can only upload PDF or HTML files!");
                   return Upload.LIST_IGNORE;
                 }
                 const uploadFile: UploadFile = {
@@ -296,7 +334,7 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
                 return true;
               }}
               maxCount={1}
-              accept=".pdf"
+              accept=".pdf,.html,text/html"
               showUploadList={false}
               style={{
                 backgroundColor: "#fafafa",
@@ -312,10 +350,10 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
                 <UploadOutlined style={{ fontSize: 48, color: "#1E4640" }} />
               </p>
               <p className="ant-upload-text" style={{ color: "#1E4640", fontWeight: 500 }}>
-                Click or drag PDF file to this area to upload
+                Click or drag file to this area to upload
               </p>
               <p className="ant-upload-hint" style={{ color: "#758382" }}>
-                Support for a single PDF file upload. File size should not exceed 10MB.
+                Support for PDF or HTML files. File size should not exceed 10MB.
               </p>
             </Upload.Dragger>
             

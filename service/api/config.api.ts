@@ -53,9 +53,9 @@ export const handleUpload = async (
   const storageRef = ref(storage, `uploads/${folderName}/${newFileName}`);
 
   try {
-    // Check if the file is a PDF
-    if (file.type !== "application/pdf") {
-      throw new Error("Only PDF files are allowed");
+    // Check if the file is a PDF or HTML
+    if (file.type !== "application/pdf" && file.type !== "text/html") {
+      throw new Error("Only PDF and HTML files are allowed");
     }
 
     const snapshot = await uploadBytes(storageRef, file);

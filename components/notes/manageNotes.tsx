@@ -243,6 +243,7 @@ const ManageNotes = () => {
       topic_id: values.topic_id,
       title: values.title,
       pdf_url: values.pdf_url,
+      html_url: values.html_url,
     };
 
     try {
@@ -273,6 +274,7 @@ const ManageNotes = () => {
       topic_id: values.topic_id,
       title: values.title,
       pdf_url: values.pdf_url,
+      html_url: values.html_url,
     };
 
     try {

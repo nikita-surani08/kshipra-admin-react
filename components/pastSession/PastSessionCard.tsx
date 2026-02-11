@@ -3,7 +3,7 @@ import { Button, Dropdown, MenuProps } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import Image from "next/image";
 
-interface LiveSessionCardProps {
+interface PastSessionCardProps {
   name: string;
   imageUrl: string;
   bannerUrl?: string;
@@ -19,7 +19,7 @@ interface LiveSessionCardProps {
   onToggle?: (type: "free" | "premium") => void;
 }
 
-const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
+const PastSessionCard: React.FC<PastSessionCardProps> = ({
   name,
   imageUrl,
   bannerUrl,
@@ -59,8 +59,8 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
       className="bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl"
       onClick={onClick}
     >
-      {/* Image Section with Overlay */}
-      <div className="relative h-56 w-full">
+      {/* Image Section */}
+      <div className="relative h-52 w-full">
         <Image
           src={bannerUrl || imageUrl}
           alt={sessionTitle}
@@ -68,9 +68,6 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
           className="object-contain"
           priority
         />
-        
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
         
         {/* Menu Button */}
         <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
@@ -96,18 +93,14 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
             }}
           />
         </Dropdown>
-        
-        {/* Overlay Text */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-          <h3 className="text-xl font-bold mb-1">{name}</h3>
-          <p className="text-sm opacity-90 mb-2">{time}</p>
-          <p className="text-sm font-medium">{sessionTitle}</p>
-          <p className="text-xs opacity-80 mt-1 line-clamp-2">{description}</p>
-        </div>
       </div>
       
       {/* Bottom Section */}
-      <div className="p-4 space-y-3 bg-[#F5F6F7]">
+      <div className="p-3 space-y-3 bg-[#F5F6F7]">
+        {/* Session Title */}
+        <div>
+          <h3 className="text-lg font-bold text-[#1E4640] mb-1">{sessionTitle}</h3>
+        </div>
         
         {/* Session Link */}
         <div>
@@ -152,4 +145,4 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
   );
 };
 
-export default LiveSessionCard;
+export default PastSessionCard;

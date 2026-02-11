@@ -39,6 +39,7 @@ export interface Note {
   is_active: boolean;
   order: number;
   pdf_url: string;
+  html_url?: string;
   subject_id: string;
   title: string;
   topic_id: string;
@@ -57,6 +58,7 @@ export const addNote = async (noteData: any) => {
       topic_id: noteData.topic_id ?? "unknown_topic",
       title: noteData.title ?? "Untitled",
       pdf_url: noteData.pdf_url ?? null, // Firebase accepts null, but not undefined
+      html_url: noteData.html_url ?? null, // Firebase accepts null, but not undefined
       order: noteData.order || 1,
       is_active: true,
       total_flashcards: 0,
@@ -94,6 +96,7 @@ export const addNote = async (noteData: any) => {
       topic_id: noteData.topic_id,
       title: noteData.title,
       pdf_url: noteData.pdf_url,
+      html_url: noteData.html_url,
       document_id: docRef.id,
       created_at: nowIso,
       updated_at: nowIso,
@@ -115,6 +118,7 @@ export const updateNote = async (noteId: string, updateData: any) => {
       topic_id: updateData.topic_id,
       title: updateData.title,
       pdf_url: updateData.pdf_url,
+      html_url: updateData.html_url,
       updated_at: new Date().toISOString(),
     });
 

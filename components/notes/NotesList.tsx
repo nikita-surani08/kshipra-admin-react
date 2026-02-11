@@ -66,10 +66,13 @@ const NotesList: React.FC<NotesListProps> = ({
       ),
     },
     {
-      title: "PDF File",
-      dataIndex: "pdf_url",
-      key: "pdf_url",
-      render: (text: string, record: Note) => {
+      title: "File",
+      key: "file",
+      render: (_: any, record: Note) => {
+        // Check for PDF or HTML file
+        const fileUrl = record.pdf_url || record.html_url;
+        const fileType = record.pdf_url ? "PDF" : record.html_url ? "HTML" : null;
+
         // Extract filename from path (assuming format: '.../notes/filename.ext')
         const getFileNameFromUrl = (url: string) => {
           try {
@@ -83,20 +86,20 @@ const NotesList: React.FC<NotesListProps> = ({
             const parts = decoded.split("/");
             const filename = parts[parts.length - 1];
 
-            return filename || "View PDF";
+            return filename || `View ${fileType}`;
           } catch (e) {
             console.error("Error parsing filename:", e);
-            return "View PDF";
+            return `View ${fileType}`;
           }
         };
 
-        const displayText = text ? getFileNameFromUrl(text) : "No file";
+        const displayText = fileUrl ? getFileNameFromUrl(fileUrl) : "No file";
 
         // If there's a file, make it a clickable link
-        if (text) {
+        if (fileUrl) {
           return (
             <a
-              href={text}
+              href={fileUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: "#1890ff" }}

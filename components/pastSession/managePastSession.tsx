@@ -4,22 +4,23 @@ import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
-import AddLiveSessionModal from "./AddLiveSessionModal";
-import RemoveLiveSessionModal from "./RemoveLiveSessionModal";
-import LiveSessionCard from "./LiveSessionCard";
-import { addSession } from "../../service/api/liveSession.api";
-import { getSessions, updateSession, deleteSession } from "../../service/api/liveSession.api";
-import { LiveSession } from "../../service/api/liveSession.api";
+import PastSessionCard from "./PastSessionCard";
+import AddPastSessionModal from "./AddPastSessionModal";
+import RemovePastSessionModal from "./RemovePastSessionModal";
+import { addSession } from "../../service/api/pastSession.api";
+import { getSessions, updateSession, deleteSession } from "../../service/api/pastSession.api";
+import { PastSession } from "../../service/api/pastSession.api";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
-const manageLiveSession = () => {
+const managePastSession = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<"list" | "add">("list");
-  const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [selectedSession, setSelectedSession] = useState<PastSession | null>(null);
   const [removeModalVisible, setRemoveModalVisible] = useState(false);
-  const [sessionToRemove, setSessionToRemove] = useState<any>(null);
-  const [sessionList, setSessionList] = useState<any[]>([]);
+  const [sessionToRemove, setSessionToRemove] = useState<PastSession | null>(null);
+  const [sessionList, setSessionList] = useState<PastSession[]>([]);
+  const [mentors, setMentors] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [displaySessions, setDisplaySessions] = useState<any[]>([]);
 
@@ -30,7 +31,7 @@ const manageLiveSession = () => {
         const sessionsResponse = await getSessions();
         setSessionList(sessionsResponse.data);
       } catch (error) {
-        console.error("Failed to fetch data:", error);
+        console.error("Failed to fetch past sessions:", error);
       } finally {
         setLoading(false);
       }
@@ -43,17 +44,11 @@ const manageLiveSession = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = sessionList.filter(session => {
-        const mentorName = session.mentor_name ? session.mentor_name.toLowerCase() : '';
-        return session.name.toLowerCase().includes(query) ||
-               session.description.toLowerCase().includes(query) ||
-               mentorName.includes(query);
+        return session.name.toLowerCase().includes(query);
       });
     }
     
     const mapped = filtered.map(session => {
-      const mentorName = session.mentor_name || "Unknown Mentor";
-      const imageUrl = "/images/dummy-banner.png"; // Default banner image
-      
       // Format date and time (optional now)
       let time = "Date TBD";
       if (session.date && session.time) {
@@ -76,12 +71,11 @@ const manageLiveSession = () => {
       
       return {
         id: session.id,
-        name: mentorName,
-        imageUrl,
+        name: session.name,
         bannerUrl: session.banner_url || "/images/dummy-banner.png",
         time,
         sessionTitle: session.name,
-        description: session.description,
+        description: session.name, // Using name as description since description might not exist
         sessionLink: session.meeting_link,
         sessionType: session.is_free ? "free" : "premium"
       };
@@ -112,11 +106,9 @@ const manageLiveSession = () => {
       
       // Map form data to API format
       const sessionData = {
-        mentor_name: values.mentor, // Changed from mentor_id to mentor_name
         user_id: [], // Empty array as default
         is_free: values.sessionType === 'free',
         name: values.sessionTitle,
-        description: values.sessionDescription,
         meeting_link: values.sessionLink,
         video_url: values.video_url || "",
         banner_url: values.banner || "",
@@ -128,7 +120,7 @@ const manageLiveSession = () => {
         updatedAt: new Date().toISOString(),
       };
 
-      let result: LiveSession;
+      let result: PastSession;
       if (selectedSession && selectedSession.id) {
         // Update existing session
         result = await updateSession(selectedSession.id, sessionData);
@@ -158,7 +150,7 @@ const manageLiveSession = () => {
   };
 
   const handleRemoveConfirm = async () => {
-    if (sessionToRemove) {
+    if (sessionToRemove && sessionToRemove.id) {
       try {
         await deleteSession(sessionToRemove.id);
         setSessionList(prev => prev.filter(session => session.id !== sessionToRemove.id));
@@ -177,20 +169,16 @@ const manageLiveSession = () => {
 
   const initialValues = selectedSession ? {
     sessionTitle: selectedSession.name,
-    sessionDescription: selectedSession.description,
+    sessionDescription: selectedSession.name, // Using name as description
     sessionLink: selectedSession.meeting_link,
     sessionType: selectedSession.is_free ? 'free' : 'premium',
-    mentor: selectedSession.mentor_name || "", // Changed from mentor_id to mentor_name
     dateTime: selectedSession.date && selectedSession.time ? dayjs(`${selectedSession.date} ${selectedSession.time}`, 'YYYY-MM-DD HH:mm') : undefined,
     banner: selectedSession.banner_url || ""
   } : undefined;
 
   const handleEditClick = () => {
-    const dummySession = {
-      name: "Sample Session",
-      shortBio: "Sample session description",
-    };
-    setSelectedSession(dummySession);
+    // Just set to null to add a new session
+    setSelectedSession(null);
     setView("add");
   };
 
@@ -203,7 +191,7 @@ const manageLiveSession = () => {
           <div
             className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
           >
-            {view === "add" ? (selectedSession ? "Edit Session" : "Create a new live session") : "Live Session Management"}
+            {view === "add" ? (selectedSession ? "Edit Session" : "Create a session") : "Past Session Management"}
           </div>
           <div className="relative rounded-xl shadow-[0px_0px_4px_0px_#1E464040]">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -285,7 +273,7 @@ const manageLiveSession = () => {
                   </div>
                 ) : (
                   displaySessions.map((session, index) => (
-                    <LiveSessionCard
+                    <PastSessionCard
                       key={session.id || index}
                       name={session.name}
                       imageUrl={session.imageUrl}
@@ -298,13 +286,13 @@ const manageLiveSession = () => {
                       onMenuClick={() => console.log("Menu clicked")}
                       onEdit={() => {
                         console.log("🟢 EDIT BUTTON CLICKED");
-                        const rawSession = sessionList.find(s => s.id === session.id);
+                        const rawSession = sessionList.find(s => s.id === session.id) || null;
                         setSelectedSession(rawSession);
                         setView("add");
                       }}
                       onDelete={() => handleRemoveClick(session)}
                       onClick={() => {
-                        const rawSession = sessionList.find(s => s.id === session.id);
+                        const rawSession = sessionList.find(s => s.id === session.id) || null;
                         setSelectedSession(rawSession);
                         // setView("add");
                       }}
@@ -316,7 +304,7 @@ const manageLiveSession = () => {
             </div>
           </div>
         ) : (
-          <AddLiveSessionModal
+          <AddPastSessionModal
             initialValues={selectedSession}
             onCancel={() => {
               setView("list");
@@ -329,7 +317,7 @@ const manageLiveSession = () => {
       </div>
       
       {/* Remove Live Session Modal */}
-      <RemoveLiveSessionModal
+      <RemovePastSessionModal
         visible={removeModalVisible}
         onCancel={handleRemoveCancel}
         onRemove={handleRemoveConfirm}
@@ -339,4 +327,4 @@ const manageLiveSession = () => {
   );
 };
 
-export default manageLiveSession;
+export default managePastSession;

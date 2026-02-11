@@ -101,13 +101,16 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
       setSelectedSubject(null);
       setTopic([]);
       setSearchValue("");
+      setFileList([]);
+      setCurrentFileUrl("");
     }
   }, [visible]);
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      let fileUrl = "";
+      let pdfUrl = "";
+      let htmlUrl = "";
 
       // Handle file upload or use direct link
       if (fileList.length > 0 && fileList[0].originFileObj) {
@@ -121,8 +124,21 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         setIsUploading(true);
         try {
           console.log("Uploading file:", file);
-          fileUrl = await handleUpload(file, "notes");
-          console.log("File uploaded successfully. URL:", fileUrl);
+          const uploadedUrl = await handleUpload(file, "notes");
+          console.log("File uploaded successfully. URL:", uploadedUrl);
+
+          // Determine if it's PDF or HTML based on file type or extension
+          const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf');
+          const isHtml = file.type === "text/html" || file.name.toLowerCase().endsWith('.html');
+
+          if (isPdf) {
+            pdfUrl = uploadedUrl;
+          } else if (isHtml) {
+            htmlUrl = uploadedUrl;
+          } else {
+            message.error("Unknown file type");
+            return;
+          }
         } catch (error) {
           console.error("Error uploading file:", error);
           message.error("Failed to upload file. Please try again.");
@@ -132,7 +148,18 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         }
       } else if (currentFileUrl) {
         // If no file but there's a direct link, use that
-        fileUrl = currentFileUrl.trim();
+        const url = currentFileUrl.trim();
+        
+        // Try to determine if it's PDF or HTML based on URL extension
+        if (url.toLowerCase().endsWith('.pdf')) {
+          pdfUrl = url;
+        } else if (url.toLowerCase().endsWith('.html')) {
+          htmlUrl = url;
+        } else {
+          // If can't determine, ask user to specify or default to one
+          message.error("Please specify whether this is a PDF or HTML link by including .pdf or .html in the URL");
+          return;
+        }
       } else {
         message.error("Please provide either a file or a link");
         return;
@@ -172,7 +199,8 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         topic: values.topic,
         topic_id: values.topic,
         title: values.title,
-        pdf_url: fileUrl,
+        pdf_url: pdfUrl,
+        html_url: htmlUrl,
         selectedSubject: selectedSubject,
       });
 
@@ -191,7 +219,8 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         subject_id: subjectId,
         topic_id: values.topic,
         title: values.title,
-        pdf_url: fileUrl,
+        pdf_url: pdfUrl,
+        html_url: htmlUrl,
         order: 1,
         is_active: true,
         total_flashcards: 0,
@@ -281,16 +310,16 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
           />
         </Form.Item>
 
-        {/* FILE LINK + UPLOAD BUTTON */}
+        {/* FILE UPLOAD */}
         <Form.Item
           name="file"
-          label="PDF File (Link or Upload)"
+          label="File (PDF or HTML)"
           rules={[
             {
               validator: (_, value) => {
-                if (!value && fileList.length === 0) {
+                if (!value && fileList.length === 0 && !currentFileUrl) {
                   return Promise.reject(
-                    "Please add a PDF link or upload a file"
+                    "Please upload a file or provide a link"
                   );
                 }
                 return Promise.resolve();
@@ -301,7 +330,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         >
           <div className="space-y-3">
             <Input
-              placeholder="Or paste PDF link here"
+              placeholder="Or paste file link here (PDF or HTML)"
               style={{
                 height: 45,
                 borderRadius: 8,
@@ -321,8 +350,11 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
 
             <Upload.Dragger
               beforeUpload={(file) => {
-                if (file.type !== "application/pdf") {
-                  message.error("You can only upload PDF files!");
+                const isPdf = file.type === "application/pdf";
+                const isHtml = file.type === "text/html" || file.name.toLowerCase().endsWith('.html');
+                
+                if (!isPdf && !isHtml) {
+                  message.error("You can only upload PDF or HTML files!");
                   return Upload.LIST_IGNORE;
                 }
                 return false; // Prevent automatic upload
@@ -340,7 +372,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
                 return true;
               }}
               maxCount={1}
-              accept=".pdf"
+              accept=".pdf,.html,text/html"
               showUploadList={false}
               style={{
                 backgroundColor: "#fafafa",
@@ -355,17 +387,17 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
               <p className="ant-upload-drag-icon">
                 <Image
                   src="/images/upload-button.svg"
-                  alt="Upload PDF"
+                  alt="Upload File"
                   width={48}
                   height={48}
                   className="mx-auto"
                 />
               </p>
               <p className="ant-upload-text" style={{ color: "#1E4640", fontWeight: 500 }}>
-                Click or drag PDF file to this area to upload
+                Click or drag file to this area to upload
               </p>
               <p className="ant-upload-hint" style={{ color: "#758382" }}>
-                Support for a single PDF file upload. File size should not exceed 10MB.
+                Support for PDF or HTML files. File size should not exceed 10MB.
               </p>
             </Upload.Dragger>
             

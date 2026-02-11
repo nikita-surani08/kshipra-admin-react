@@ -1,3 +1,3 @@
-import pastSession from "@/components/pastSession";
+import managePastSession from "@/components/pastSession/managePastSession";
 
-export default pastSession;
+export default managePastSession;

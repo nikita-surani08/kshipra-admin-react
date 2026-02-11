@@ -1,23 +1,22 @@
 import React, { useRef, useState, useEffect } from "react";
 import dayjs from "dayjs";
 import Image from "next/image";
-import { Input, Button, Form, DatePicker } from "antd";
-import { Work_Sans } from "next/font/google"; // Leave this as is
-import { LinkOutlined } from "@ant-design/icons";
-import styles from "./liveSession.module.css";
+import { Input, Button, Form, Select, DatePicker } from "antd";
+import { Work_Sans } from "next/font/google"; 
+import styles from "./pastSession.module.css";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../service/config/firebase.config";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
-interface AddLiveSessionModalProps {
+interface AddPastSessionModalProps {
   onCancel: () => void;
   onSave?: (data: any) => void;
   initialValues?: any;
   loading?: boolean;
 }
 
-const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({ 
+const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({ 
   onCancel, 
   onSave, 
   initialValues, 
@@ -45,7 +44,6 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
         sessionDescription: initialValues.description,
         sessionLink: initialValues.meeting_link,
         sessionType: initialValues.is_free ? 'free' : 'premium',
-        mentor: initialValues.mentor_name || "", // Changed from mentor_id to mentor_name
         dateTime: dayjs(`${initialValues.date} ${initialValues.time}`, 'YYYY-MM-DD HH:mm'),
         banner: initialValues.banner_url || ""
       };
@@ -204,25 +202,6 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
               />
             </Form.Item>
           </div>
-
-          {/* Session Description Field */}
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-2">
-              Session Description
-            </label>
-            <Form.Item
-              name="sessionDescription"
-              rules={[{ required: true, message: "Enter session description" }]}
-              className="mb-0"
-            >
-              <Input.TextArea
-                placeholder="Enter session description"
-                rows={4}
-                className="p-3 rounded-xl border border-gray-300 text-base resize-none"
-              />
-            </Form.Item>
-          </div>
-
           {/* Session Link Field */}
           <div>
             <label className="text-gray-700 font-semibold text-sm block mb-2">
@@ -270,57 +249,6 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Divider */}
-        <div className="border-t border-gray-300 my-8"></div>
-
-        {/* Mentor Details */}
-        <div className="flex flex-col gap-6 flex-1 overflow-y-auto no-scrollbar">
-          {/* Section Title */}
-          <h2 className="text-[#1E4640] font-bold text-xl">
-            Mentor Details
-          </h2>
-
-          {/* Mentor Name Field */}
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-2">
-              Mentor Name
-            </label>
-            <Form.Item
-              name="mentor"
-              className="mb-0"
-            >
-              <Input
-                placeholder="Enter mentor name"
-                className="p-3 rounded-xl border border-gray-300 text-base"
-              />
-            </Form.Item>
-          </div>
-
-          {/* Date and Time Field */}
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-2">
-              Date and Time
-            </label>
-            <Form.Item
-              name="dateTime"
-              className="mb-0"
-            >
-              <DatePicker
-                showTime
-                placeholder="Select date and time"
-                className="w-full"
-                size="large"
-                style={{
-                  borderRadius: '12px',
-                  border: '1px solid #d1d5db'
-                }}
-                format="YYYY-MM-DD hh:mm A"
-              />
-            </Form.Item>
-          </div>
-        </div>
-
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 mt-12 pt-8 border-t border-gray-300">
           <Button
@@ -343,4 +271,4 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
   );
 };
 
-export default AddLiveSessionModal;
+export default AddPastSessionModal;
