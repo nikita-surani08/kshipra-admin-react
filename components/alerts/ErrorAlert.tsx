@@ -13,7 +13,7 @@ const ErrorAlert = ({
   message,
   open,
   onClose,
-  autoHideDuration = 2000,
+  autoHideDuration = 6000,
 }: ErrorAlertProps) => {
   return (
     <Snackbar

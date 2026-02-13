@@ -173,6 +173,25 @@ export const deleteNote = async (noteId: string) => {
   }
 };
 
+// Bulk update note orders
+export const updateNoteOrders = async (noteOrders: { noteId: string; order: number }[]) => {
+  try {
+    const batch = noteOrders.map(({ noteId, order }) => {
+      const noteRef = doc(db, "notes", noteId);
+      return updateDoc(noteRef, {
+        order: order,
+        updated_at: new Date().toISOString(),
+      });
+    });
+    
+    await Promise.all(batch);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating note orders:", error);
+    throw new Error("Failed to update note orders");
+  }
+};
+
 // Get notes with pagination
 export const getNotes = async (
   page: number = 1,
@@ -271,7 +290,7 @@ export const getNotesBySubjectId = async (
           where("title", ">=", searchQuery),
           where("title", "<=", searchQuery + "\uf8ff"),
           where("is_active", "==", true),
-          orderBy("created_at", "desc"),
+          orderBy("order", "asc"),
           limit(pageSize)
         );
         console.log(q, "this is q");
@@ -283,7 +302,7 @@ export const getNotesBySubjectId = async (
           where("title", ">=", searchQuery),
           where("title", "<=", searchQuery + "\uf8ff"),
           where("is_active", "==", true),
-          orderBy("created_at", "desc"),
+          orderBy("order", "asc"),
           startAfter(lastVisibleDocs[page - 1]),
           limit(pageSize)
         );
@@ -323,7 +342,7 @@ export const getNotesBySubjectId = async (
         notesRef,
         where("subject_id", "==", subjectId),
         where("is_active", "==", true),
-        orderBy("created_at", "desc"),
+        orderBy("order", "asc"),
         limit(pageSize)
       );
     } else {
@@ -331,7 +350,7 @@ export const getNotesBySubjectId = async (
         notesRef,
         where("subject_id", "==", subjectId),
         where("is_active", "==", true),
-        orderBy("created_at", "desc"),
+        orderBy("order", "asc"),
         startAfter(lastVisibleDocs[page - 1]),
         limit(pageSize)
       );
@@ -392,7 +411,7 @@ export const getNotesByTopicId = async (
           where("title", ">=", searchQuery),
           where("title", "<=", searchQuery + "\uf8ff"),
           where("is_active", "==", true),
-          orderBy("created_at", "desc"),
+          orderBy("order", "asc"),
           limit(pageSize)
         );
       } else {
@@ -402,7 +421,7 @@ export const getNotesByTopicId = async (
           where("title", ">=", searchQuery),
           where("title", "<=", searchQuery + "\uf8ff"),
           where("is_active", "==", true),
-          orderBy("created_at", "desc"),
+          orderBy("order", "asc"),
           startAfter(lastVisibleDocs[page - 1]),
           limit(pageSize)
         );
@@ -442,7 +461,7 @@ export const getNotesByTopicId = async (
         notesRef,
         where("topic_id", "==", topicId),
         where("is_active", "==", true),
-        orderBy("created_at", "desc"),
+        orderBy("order", "asc"),
         limit(pageSize)
       );
     } else {
@@ -450,7 +469,7 @@ export const getNotesByTopicId = async (
         notesRef,
         where("topic_id", "==", topicId),
         where("is_active", "==", true),
-        orderBy("created_at", "desc"),
+        orderBy("order", "asc"),
         startAfter(lastVisibleDocs[page - 1]),
         limit(pageSize)
       );

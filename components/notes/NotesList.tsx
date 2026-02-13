@@ -165,7 +165,7 @@ const NotesList: React.FC<NotesListProps> = ({
       <Table
         columns={columns}
         dataSource={notes}
-        rowKey="id"
+        rowKey="document_id"
         loading={loading}
         pagination={{
           current: currentPage,

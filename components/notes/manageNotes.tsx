@@ -4,12 +4,13 @@ import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import type { MenuProps } from "antd";
 import { Dropdown, Space } from "antd";
-import { DownOutlined } from "@ant-design/icons";
+import { DownOutlined, PlusOutlined, DragOutlined, SaveOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import NotesList from "./NotesList";
 import AddNoteModal from "./AddNoteModal";
 import EditNoteModal from "./EditNoteModal";
 import DeleteNoteModal from "./DeleteNoteModal";
+import ReorderNotesModal from "./ReorderNotesModal";
 import {
   addNote,
   deleteNote,
@@ -17,6 +18,8 @@ import {
   getNotesBySubjectId,
   getNotesByTopicId,
   updateNote,
+  updateNoteOrders,
+  Note,
 } from "@/service/api/notes.api";
 import { getSubjects, getTopics } from "@/service/api/config.api";
 import { debounce } from "lodash";
@@ -39,6 +42,8 @@ const ManageNotes = () => {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isReorderModalVisible, setIsReorderModalVisible] = useState(false);
+  const [allNotes, setAllNotes] = useState<any>([]);
   const [currentNote, setCurrentNote] = useState<any | null>(null);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -330,6 +335,75 @@ const ManageNotes = () => {
     setCurrentNote(null);
   };
 
+  const fetchAllNotes = async () => {
+    try {
+      let result;
+
+      if (selectedSubject && selectedTopic) {
+        result = await getNotesByTopicId(
+          selectedTopic,
+          1,
+          1000 // Large number to get all notes
+        );
+      } else if (selectedSubject) {
+        result = await getNotesBySubjectId(
+          selectedSubject,
+          1,
+          1000 // Large number to get all notes
+        );
+      } else {
+        return;
+      }
+
+      setAllNotes(result.data.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)));
+    } catch (error) {
+      console.error("Error fetching all notes:", error);
+    }
+  };
+
+  const handleReorderClick = async () => {
+    console.log("Reorder clicked, selectedSubject:", selectedSubject);
+
+    if (!selectedSubject) {
+      console.log("No subject selected, showing error message");
+      setErrorMessage("Please select a subject first to reorder its notes.");
+      setIsErrorAlertOpen(true);
+      return;
+    }
+
+    console.log("Subject selected, opening reorder modal");
+    await fetchAllNotes();
+    setIsReorderModalVisible(true);
+  };
+
+  const handleSaveOrder = async (reorderedNotes: Note[]) => {
+    try {
+      setLoading(true);
+      const noteOrders = reorderedNotes.map((note, index) => ({
+        noteId: note.document_id,
+        order: index + 1,
+      }));
+      
+      await updateNoteOrders(noteOrders);
+      setSuccessMessage("Note order updated successfully.");
+      setErrorMessage(null);
+      setIsSuccessAlertOpen(true);
+      setIsReorderModalVisible(false);
+      fetchNotes(pagination.current, pagination.pageSize);
+    } catch (error) {
+      console.error("Error updating note order:", error);
+      const message = error instanceof Error ? error.message : "Failed to update note order.";
+      setErrorMessage(message);
+      setIsErrorAlertOpen(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelReorder = () => {
+    setIsReorderModalVisible(false);
+  };
+
   const handleEditClick = (note: any) => {
     setCurrentNote(note);
     setIsEditModalVisible(true);
@@ -487,14 +561,26 @@ const ManageNotes = () => {
                 </div>
               </Dropdown>
             </div>
-            <div className="relative h-[50px] shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-white transition-all duration-300 hover:-translate-y-0.2">
-              <Image src="/images/plus.svg" width={20} height={20} alt="plus" />
-              <button
-                className="text-[#1E4640] font-medium"
-                onClick={() => setIsAddModalVisible(true)}
-              >
-                Add Notes
-              </button>
+            <div className="relative h-[50px] flex gap-4">
+              <div className="shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-white transition-all duration-300 hover:-translate-y-0.2">
+                <Image src="/images/plus.svg" width={20} height={20} alt="plus" />
+                <button
+                  className="text-[#1E4640] font-medium"
+                  onClick={() => setIsAddModalVisible(true)}
+                >
+                  Add Notes
+                </button>
+              </div>
+              
+              <div className="shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-white transition-all duration-300 hover:-translate-y-0.2">
+                <DragOutlined className="text-[#1E4640]" />
+                <button
+                  className="text-[#1E4640] font-medium cursor-pointer"
+                  onClick={handleReorderClick}
+                >
+                  Reorder
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -585,6 +671,16 @@ const ManageNotes = () => {
           loading={loading}
         />
       )}
+
+      <ReorderNotesModal
+        visible={isReorderModalVisible}
+        notes={allNotes}
+        onCancel={handleCancelReorder}
+        onSave={handleSaveOrder}
+        loading={loading}
+        subjectName={subject.find((s: any) => s.document_id === selectedSubject)?.name}
+        topicName={topic.find((t: any) => t.document_id === selectedTopic)?.title || topic.find((t: any) => t.document_id === selectedTopic)?.name}
+      />
     </div>
   );
 };
