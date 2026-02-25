@@ -8,10 +8,12 @@ const { Text } = Typography;
 export interface Booking {
   id: string;
   studentName: string;
+  studentEmail: string;
   mentorName: string;
   timeSlot: string;
   duration: string;
   amount: string;
+  bookingDate: string;
   bookingStatus: "Accepted" | "Rejected" | "Pending";
   paymentStatus: "Paid" | "Pending" | "Refund";
 }
@@ -38,6 +40,17 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Student Name",
       dataIndex: "studentName",
       key: "studentName",
+      width: "10%",
+      render: (text: string) => (
+        <Text ellipsis style={{ maxWidth: "100px" }}>
+          {text}
+        </Text>
+      ),
+    },
+    {
+      title: "Student Email",
+      dataIndex: "studentEmail",
+      key: "studentEmail",
       width: "15%",
       render: (text: string) => (
         <Text ellipsis style={{ maxWidth: "150px" }}>
@@ -49,9 +62,9 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Mentor Name",
       dataIndex: "mentorName",
       key: "mentorName",
-      width: "15%",
+      width: "13%",
       render: (text: string) => (
-        <Text ellipsis style={{ maxWidth: "150px" }}>
+        <Text ellipsis style={{ maxWidth: "130px" }}>
           {text}
         </Text>
       ),
@@ -60,9 +73,9 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Time Slot",
       dataIndex: "timeSlot",
       key: "timeSlot",
-      width: "20%",
+      width: "13%",
       render: (text: string) => (
-        <Text ellipsis style={{ maxWidth: "200px" }}>
+        <Text ellipsis style={{ maxWidth: "130px" }}>
           {text}
         </Text>
       ),
@@ -71,21 +84,21 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Duration",
       dataIndex: "duration",
       key: "duration",
-      width: "10%",
+      width: "8%",
       render: (text: string) => <Text>{text}</Text>,
     },
     {
       title: "Amount",
       dataIndex: "amount",
       key: "amount",
-      width: "10%",
+      width: "7%",
       render: (text: string) => <Text>{text}</Text>,
     },
     {
       title: "Booking Status",
       dataIndex: "bookingStatus",
       key: "bookingStatus",
-      width: "15%",
+      width: "10%",
       render: (status: string) => {
         let color = "";
 
@@ -110,7 +123,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Payment Status",
       dataIndex: "paymentStatus",
       key: "paymentStatus",
-      width: "15%",
+      width: "9%",
       render: (status: string) => {
         let color = "";
         switch (status) {
@@ -128,6 +141,17 @@ const BookingsList: React.FC<BookingsListProps> = ({
         }
         return <Text>{status}</Text>;
       },
+    },
+    {
+      title: "Booking Date",
+      dataIndex: "bookingDate",
+      key: "bookingDate",
+      width: "15%",
+      render: (text: string) => (
+        <Text ellipsis style={{ maxWidth: "150px" }}>
+          {text}
+        </Text>
+      ),
     },
   ];
 

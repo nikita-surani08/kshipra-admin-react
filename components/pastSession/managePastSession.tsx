@@ -250,11 +250,11 @@ const managePastSession = () => {
         )}
 
         {view === "list" ? (
-          <div className="h-full flex-1 w-full flex bg-white px-4 pb-4">
-            <div className="w-full max-h-[500px] overflow-y-auto p-2 no-scrollbar">
-              <div className="grid grid-cols-3 gap-4 w-full">
+          <div className="flex-1 w-full flex bg-white px-4 pb-4 overflow-hidden">
+            <div className="w-full flex-1 overflow-y-auto p-2 no-scrollbar">
+              <div className="grid grid-cols-3 gap-4 w-full min-h-full">
                 {displaySessions.length === 0 ? (
-                  <div className="col-span-3 flex flex-col items-center justify-center h-full">
+                  <div className="col-span-3 flex flex-col items-center justify-center h-full min-h-[400px]">
                     <Image
                       src="/images/no_content.svg"
                       width={120}

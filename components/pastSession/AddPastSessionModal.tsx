@@ -27,6 +27,7 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [sessionType, setSessionType] = useState<'free' | 'premium'>('free');
+  const [bannerError, setBannerError] = useState<string>('');
 
   useEffect(() => {
     console.log("🟠 MODAL useEffect RUNNING");
@@ -71,41 +72,58 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
     if (file) {
       setBannerPreview(URL.createObjectURL(file));
       setBannerFile(file);
+      setBannerError(''); // Clear error when banner is selected
     }
   };
 
   const handleSubmit = async () => {
     console.log("Submit clicked");
-    
-    let bannerUrl = bannerPreview;
-    
-    // Upload banner to Firebase Storage if file exists
-    if (bannerFile) {
-      try {
-        const storageRef = ref(storage, `uploads/sessions/${Date.now()}_${bannerFile.name}`);
-        const snapshot = await uploadBytes(storageRef, bannerFile);
-        bannerUrl = await getDownloadURL(snapshot.ref);
-        console.log("Banner uploaded:", bannerUrl);
-      } catch (error) {
-        console.error("Error uploading banner:", error);
-        // You might want to show an error message to the user
+
+    // Check banner validation first (custom validation)
+    if (!bannerFile && !bannerPreview) {
+      setBannerError('Banner is required - please upload a banner image');
+    } else {
+      setBannerError(''); // Clear error if banner exists
+    }
+
+    try {
+      // Validate form fields (this will show form field errors)
+      const values = await form.validateFields();
+      console.log("Validation successful", values);
+
+      // If banner validation failed, don't proceed
+      if (!bannerFile && !bannerPreview) {
         return;
       }
-    }
-    
-    form
-      .validateFields()
-      .then((values: any) => {
-        console.log("Validation successful", values);
-        onSave?.({
-          ...values,
-          banner: bannerUrl,
-          bannerFile
-        });
-      })
-      .catch((errorInfo: any) => {
-        console.error("Validation failed:", errorInfo);
+
+      let bannerUrl = bannerPreview;
+
+      // Upload banner to Firebase Storage if file exists
+      if (bannerFile) {
+        try {
+          const storageRef = ref(storage, `uploads/sessions/${Date.now()}_${bannerFile.name}`);
+          const snapshot = await uploadBytes(storageRef, bannerFile);
+          bannerUrl = await getDownloadURL(snapshot.ref);
+          console.log("Banner uploaded:", bannerUrl);
+        } catch (error) {
+          console.error("Error uploading banner:", error);
+          // Show error but don't prevent form submission
+          // You might want to show an error message to the user
+        }
+      }
+
+      // Call onSave with all form data including sessionType
+      onSave?.({
+        ...values,
+        sessionType, // Include the sessionType state
+        banner: bannerUrl,
+        bannerFile
       });
+
+    } catch (errorInfo: any) {
+      console.error("Validation failed or submission error:", errorInfo);
+      // Validation errors will be shown by Ant Design Form
+    }
   };
 
   return (
@@ -113,12 +131,11 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
       className={`w-full h-[calc(100vh-115px)] flex flex-col bg-white rounded-3xl p-8 overflow-y-auto no-scrollbar ${worksans.className}`}
     >
       <Form form={form} layout="vertical" className="w-full">
-        
         {/* Banner Upload Section */}
         <div className="mb-8">
           <div
             onClick={handleBannerClick}
-            className="w-full border-2 border-dashed border-gray-400 rounded-2xl p-12 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-gray-500 transition relative min-h-[200px]"
+            className={`w-full border-2 border-dashed ${bannerError ? 'border-red-400' : 'border-gray-400'} rounded-2xl p-12 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-gray-500 transition relative min-h-[200px]`}
           >
             {bannerPreview ? (
               <Image
@@ -162,6 +179,13 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
                 >
                   Upload Banner
                 </Button>
+
+                {/* Error Message - More Prominent */}
+                {bannerError && (
+                  <div className="text-red-600 text-lg font-semibold mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                     {bannerError}
+                  </div>
+                )}
               </>
             )}
             
@@ -193,7 +217,6 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
             </label>
             <Form.Item
               name="sessionTitle"
-              rules={[{ required: true, message: "Enter session title" }]}
               className="mb-0"
             >
               <Input
@@ -262,6 +285,8 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
             className={`px-16 py-6 rounded-lg bg-[#1E4640] text-white font-semibold text-base hover:bg-[#153a34] ${styles.customPrimaryButton}`}
             onClick={handleSubmit}
             loading={loading}
+            disabled={loading}
+            htmlType="button"
           >
             {initialValues ? "Update" : "Submit"}
           </Button>

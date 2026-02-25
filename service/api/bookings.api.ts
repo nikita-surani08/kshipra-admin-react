@@ -115,6 +115,17 @@ const formatSessionDate = (val: any) => {
   return String(val);
 };
 
+const formatBookingDate = (val: any) => {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object" && typeof val.toDate === "function") {
+    const d: Date = val.toDate();
+    return d.toISOString().slice(0, 16).replace('T', ' ');
+  }
+  if (val instanceof Date) return val.toISOString().slice(0, 16).replace('T', ' ');
+  return String(val);
+};
+
 export const getBookings = async (
   page: number = 1,
   pageSize: number = 10,
@@ -166,14 +177,16 @@ export const getBookings = async (
         }
       }
 
-      // fetch student name
+      // fetch student name and email
       let studentName = data.userId || "-";
+      let studentEmail = "-";
       if (data.userId) {
         try {
           const userDoc = await getDoc(doc(db, "users", data.userId));
           if (userDoc.exists()) {
             const u = userDoc.data();
             studentName = u?.name || u?.displayName || u?.email || studentName;
+            studentEmail = u?.email || studentEmail;
           }
         } catch (e) {
           // ignore
@@ -227,12 +240,14 @@ export const getBookings = async (
       results.push({
         id: docSnap.id,
         studentName,
+        studentEmail,
         mentorName,
         timeSlot,
         duration: durationVal,
         amount: formatAmount(amount, currency),
         bookingStatus,
         paymentStatus,
+        bookingDate: formatBookingDate(data.createdAt),
         raw: data,
       });
     }

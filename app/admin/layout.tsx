@@ -21,9 +21,11 @@ export default function AdminLayout({
   }, [router]);
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <main className="w-[80%] border">{children}</main>
+    <div className="flex h-screen overflow-hidden">
+      <div className="w-[20%] h-full overflow-hidden">
+        <Sidebar />
+      </div>
+      <main className="w-[80%] h-full overflow-y-auto border">{children}</main>
     </div>
   );
 }

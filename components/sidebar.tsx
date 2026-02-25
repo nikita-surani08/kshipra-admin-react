@@ -50,7 +50,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`w-[20%] h-screen bg-[#F5F5F5] flex flex-col justify-between ${worksans.className}`}
+      className={`w-full h-full bg-[#F5F5F5] flex flex-col justify-between ${worksans.className}`}
     >
       <div>
         <div className="p-6">

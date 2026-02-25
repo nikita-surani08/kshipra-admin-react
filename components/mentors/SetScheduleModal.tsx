@@ -30,6 +30,8 @@ const initialSchedule: DaySchedule[] = [
     { day: "Wednesday", isOpen: false, slots: [{ start: dayjs().hour(7).minute(0), end: dayjs().hour(19).minute(0) }] },
     { day: "Thursday", isOpen: false, slots: [{ start: dayjs().hour(7).minute(0), end: dayjs().hour(19).minute(0) }] },
     { day: "Friday", isOpen: false, slots: [{ start: dayjs().hour(7).minute(0), end: dayjs().hour(19).minute(0) }] },
+    { day: "Saturday", isOpen: false, slots: [{ start: dayjs().hour(7).minute(0), end: dayjs().hour(19).minute(0) }] },
+    { day: "Sunday", isOpen: false, slots: [{ start: dayjs().hour(7).minute(0), end: dayjs().hour(19).minute(0) }] },
 ];
 
 const SetScheduleModal: React.FC<SetScheduleModalProps> = ({ open, onCancel, onSave }) => {

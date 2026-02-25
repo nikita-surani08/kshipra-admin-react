@@ -4,8 +4,9 @@ import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { useState, useEffect } from "react";
 import BookingsList, { Booking } from "./BookingsList"; // Import new list
-import "./bookings.css"; // Assuming we might want to keep or rename flashcard.css references if needed, but for now I'll trust bookings.css exists or use inline styles. 
-// Note: The previous file imported "./flashcard.css", but the directory listing showed "bookings.css". 
+import "./bookings.css";
+import { Button } from "antd";
+import { DownloadOutlined } from "@ant-design/icons";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"], subsets: ["latin"] });
 
@@ -15,6 +16,7 @@ import Loader from "../loader";
 const ManageBookings = () => {
   const [bookingsData, setBookingsData] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -59,6 +61,117 @@ const ManageBookings = () => {
     }
   };
 
+  const handleExportCSV = async () => {
+    console.log("Starting CSV export...");
+    setExportLoading(true);
+    try {
+      // Fetch all bookings data (not paginated)
+      const allBookings: Booking[] = [];
+      const bookingIds = new Set(); // Track unique booking IDs to prevent duplicates
+      let lastVisible: any = null;
+      let hasMore = true;
+      const batchSize = 100; // Fetch in batches of 100
+      let currentPage = 1; // Track current page for proper pagination
+
+      console.log("Fetching bookings data...");
+      while (hasMore) {
+        const res: any = await getBookings(currentPage, batchSize, lastVisible);
+        console.log("Batch result:", res);
+        if (res?.data && res.data.length > 0) {
+          // Add only unique bookings
+          res.data.forEach((booking: Booking) => {
+            if (booking.id && !bookingIds.has(booking.id)) {
+              bookingIds.add(booking.id);
+              allBookings.push(booking);
+            }
+          });
+          
+          lastVisible = res.lastVisible;
+          currentPage++; // Increment page for next batch
+          // Stop if we've got all records or the last batch was smaller than batch size
+          hasMore = res.data.length === batchSize && allBookings.length < res.total;
+          console.log("Unique bookings so far:", allBookings.length, "Total expected:", res.total);
+        } else {
+          hasMore = false;
+        }
+      }
+
+      console.log("Total unique bookings fetched:", allBookings.length);
+
+      // Convert to CSV
+      if (allBookings.length === 0) {
+        console.log("No bookings data to export");
+        alert("No bookings data to export");
+        return;
+      }
+
+      // CSV headers
+      const headers = [
+        "Student Name",
+        "Student Email",
+        "Mentor Name",
+        "Time Slot",
+        "Duration",
+        "Amount",
+        "Booking Status",
+        "Payment Status",
+        "Booking Date"
+      ];
+
+      // CSV rows
+      const csvRows = [
+        headers.join(","),
+        ...allBookings.map(booking => [
+          `"${booking.studentName || ""}"`,
+          `"${booking.studentEmail || ""}"`,
+          `"${booking.mentorName || ""}"`,
+          `"${booking.timeSlot || ""}"`,
+          `"${booking.duration || ""}"`,
+          `"${booking.amount || ""}"`,
+          `"${booking.bookingStatus || ""}"`,
+          `"${booking.paymentStatus || ""}"`,
+          `"${booking.bookingDate || ""}"`
+        ].join(","))
+      ];
+
+      // Create and download CSV file
+      const csvContent = csvRows.join("\n");
+      console.log("CSV content length:", csvContent.length);
+      console.log("Sample CSV content:", csvContent.substring(0, 200));
+      
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      console.log("Blob created:", blob.size, "bytes");
+      
+      const url = URL.createObjectURL(blob);
+      console.log("URL created:", url);
+      
+      const link = document.createElement("a");
+      console.log("Link element created");
+      
+      link.setAttribute("href", url);
+      link.setAttribute("download", `bookings_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.display = "none";
+      document.body.appendChild(link);
+      console.log("Link added to DOM");
+      
+      link.click();
+      console.log("Link clicked - download should start");
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.log("Cleanup completed");
+      }, 100);
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      alert("Failed to export bookings data: " + (error as Error).message);
+    } finally {
+      setExportLoading(false);
+      console.log("Export loading state reset");
+    }
+  };
+
   return (
     <div className={`flex flex-col px-6 py-4 bg-[#F5F6F7] h-full ${worksans.className}`}>
       {/* Header Section */}
@@ -89,10 +202,29 @@ const ManageBookings = () => {
       <div className={`h-[88%] w-full flex flex-col bg-white rounded-3xl overflow-hidden ${worksans.className}`}>
         {/* Total Bookings Count Area */}
         <div className="w-full flex-shrink-0 px-6 py-5 mt-3">
-          <div
-            className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
-          >
-            Total Bookings({totalBookings})
+          <div className="flex justify-between items-center">
+            <div
+              className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
+            >
+              Total Bookings({totalBookings})
+            </div>
+            <button
+              className="bg-[#1E4640] h-[50px] font-medium shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-6 cursor-pointer text-white rounded-xl items-center justify-center flex transition-all duration-300 hover:-translate-y-0.2"
+              onClick={handleExportCSV}
+              disabled={exportLoading}
+            >
+              {exportLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Exporting...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <DownloadOutlined />
+                  Export CSV
+                </div>
+              )}
+            </button>
           </div>
         </div>
 
