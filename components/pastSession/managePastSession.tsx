@@ -4,11 +4,12 @@ import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
+import { DragOutlined } from "@ant-design/icons";
 import PastSessionCard from "./PastSessionCard";
 import AddPastSessionModal from "./AddPastSessionModal";
 import RemovePastSessionModal from "./RemovePastSessionModal";
-import { addSession } from "../../service/api/pastSession.api";
-import { getSessions, updateSession, deleteSession } from "../../service/api/pastSession.api";
+import ReorderPastSessionModal from "./ReorderPastSessionModal";
+import { addSession, getSessions, updateSession, deleteSession, updateSessionOrders } from "../../service/api/pastSession.api";
 import { PastSession } from "../../service/api/pastSession.api";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
@@ -23,6 +24,7 @@ const managePastSession = () => {
   const [mentors, setMentors] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [displaySessions, setDisplaySessions] = useState<any[]>([]);
+  const [reorderModalVisible, setReorderModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,9 +76,9 @@ const managePastSession = () => {
         name: session.name,
         bannerUrl: session.banner_url || "/images/dummy-banner.png",
         time,
-        sessionTitle: session.name,
-        description: session.name, // Using name as description since description might not exist
-        sessionLink: session.meeting_link,
+        sessionTitle: session.name || "",
+        description: session.name || "", // Using name as description since description might not exist
+        sessionLink: session.meeting_link || "",
         sessionType: session.is_free ? "free" : "premium"
       };
     });
@@ -108,8 +110,9 @@ const managePastSession = () => {
       const sessionData = {
         user_id: [], // Empty array as default
         is_free: values.sessionType === 'free',
-        name: values.sessionTitle,
-        meeting_link: values.sessionLink,
+        name: values.sessionTitle || "", 
+        description: values.sessionDescription || "",
+        meeting_link: values.sessionLink || "",
         video_url: values.video_url || "",
         banner_url: values.banner || "",
         date: values.dateTime ? values.dateTime.format('YYYY-MM-DD') : '',
@@ -142,6 +145,25 @@ const managePastSession = () => {
     } catch (error) {
       console.error("Failed to save session:", error);
     }
+  };
+
+  const handleSaveReorder = async (reorderedSessions: PastSession[]) => {
+    try {
+      // Update the order in Firestore
+      await updateSessionOrders(reorderedSessions);
+      
+      // Update the local state with new order
+      setSessionList(reorderedSessions);
+      setReorderModalVisible(false);
+      
+      console.log("Session order saved successfully");
+    } catch (error) {
+      console.error("Failed to save session order:", error);
+    }
+  };
+
+  const handleCancelReorder = () => {
+    setReorderModalVisible(false);
   };
 
   const handleRemoveClick = (session: any) => {
@@ -244,6 +266,17 @@ const managePastSession = () => {
                     Add Session
                   </button>
                 </div>
+                <div className="shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-white transition-all duration-300 hover:-translate-y-0.2">
+                  <DragOutlined className="text-[#1E4640]" />
+                  <button
+                    className="text-[#1E4640] font-medium"
+                    onClick={() => {
+                      setReorderModalVisible(true);
+                    }}
+                  >
+                    Reorder
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -311,7 +344,6 @@ const managePastSession = () => {
               setSelectedSession(null);
             }}
             onSave={handleAddSession}
-            loading={loading}
           />
         )}
       </div>
@@ -322,6 +354,15 @@ const managePastSession = () => {
         onCancel={handleRemoveCancel}
         onRemove={handleRemoveConfirm}
         loading={false}
+      />
+      
+      {/* Reorder Past Session Modal */}
+      <ReorderPastSessionModal
+        visible={reorderModalVisible}
+        sessions={sessionList}
+        onCancel={handleCancelReorder}
+        onSave={handleSaveReorder}
+        loading={loading}
       />
     </div>
   );

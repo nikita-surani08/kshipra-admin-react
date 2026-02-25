@@ -27,6 +27,7 @@ export interface PastSession {
     isActive: boolean;
     createdAt: any;
     updatedAt: any;
+    order?: number;
 }
 
 export const addSession = async (sessionData: PastSession) => {
@@ -66,6 +67,27 @@ export const addSession = async (sessionData: PastSession) => {
   } catch (error) {
     console.error("Error adding session:", error);
     throw new Error("Failed to add session");
+  }
+};
+
+export const updateSessionOrders = async (sessions: PastSession[]) => {
+  try {
+    // Update order field for all sessions
+    const updatePromises = sessions.map(async (session, index) => {
+      if (session.id) {
+        const sessionRef = doc(db, "past_sessions", session.id);
+        await updateDoc(sessionRef, { order: index + 1 });
+        return { ...session, order: index + 1 };
+      }
+      return session;
+    });
+
+    const updatedSessions = await Promise.all(updatePromises);
+    console.log("Session orders updated:", updatedSessions);
+    return updatedSessions;
+  } catch (error) {
+    console.error("Error updating session orders:", error);
+    throw new Error("Failed to update session orders");
   }
 };
 

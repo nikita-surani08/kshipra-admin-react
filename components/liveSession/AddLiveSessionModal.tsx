@@ -14,16 +14,15 @@ interface AddLiveSessionModalProps {
   onCancel: () => void;
   onSave?: (data: any) => void;
   initialValues?: any;
-  loading?: boolean;
 }
 
 const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({ 
   onCancel, 
   onSave, 
-  initialValues, 
-  loading 
+  initialValues
 }) => {
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
   const bannerFileInputRef = useRef<HTMLInputElement | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -79,24 +78,52 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    console.log("Submit clicked");
-
-    // Check banner validation first (custom validation)
-    if (!bannerFile && !bannerPreview) {
-      setBannerError('Banner is required - please upload a banner image');
-    } else {
-      setBannerError(''); // Clear error if banner exists
-    }
-
     try {
-      // Validate form fields (this will show form field errors)
-      const values = await form.validateFields();
-      console.log("Validation successful", values);
+      // Set loading immediately when submit is clicked
+      setLoading(true);
+      
+      // Get form values without validation to check all fields manually
+      const values = form.getFieldsValue();
 
-      // If banner validation failed, don't proceed
+      // Collect all validation errors
+      let hasErrors = false;
+
+      // Check banner validation
       if (!bannerFile && !bannerPreview) {
+        setBannerError("Banner is required - please upload a banner image");
+        hasErrors = true;
+      } else {
+        setBannerError("");
+      }
+
+      // Check session link validation
+      if (!values.sessionLink || values.sessionLink.trim() === '') {
+        // Manually trigger session link validation error
+        form.setFields([
+          {
+            name: 'sessionLink',
+            errors: ['Enter session link']
+          }
+        ]);
+        hasErrors = true;
+      } else {
+        // Clear session link error if valid
+        form.setFields([
+          {
+            name: 'sessionLink',
+            errors: []
+          }
+        ]);
+      }
+
+      // If there are validation errors, don't proceed
+      if (hasErrors) {
+        setLoading(false); // Reset loading if validation fails
         return;
       }
+
+      // Now validate all other fields properly
+      await form.validateFields();
 
       let bannerUrl = bannerPreview;
 
@@ -109,13 +136,13 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
           console.log("Banner uploaded:", bannerUrl);
         } catch (error) {
           console.error("Error uploading banner:", error);
-          // Show error but don't prevent form submission
-          // You might want to show an error message to the user
+          setLoading(false); // Reset loading if upload fails
+          return;
         }
       }
 
       // Call onSave with all form data including sessionType
-      onSave?.({
+      await onSave?.({
         ...values,
         sessionType, // Include the sessionType state
         banner: bannerUrl,
@@ -124,7 +151,7 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
 
     } catch (errorInfo: any) {
       console.error("Validation failed or submission error:", errorInfo);
-      // Validation errors will be shown by Ant Design Form
+      setLoading(false); // Reset loading if validation fails
     }
   };
 
@@ -349,16 +376,21 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
           >
             Cancel
           </Button>
-          <Button
-            type="primary"
-            className={`px-16 py-6 rounded-lg bg-[#1E4640] text-white font-semibold text-base hover:bg-[#153a34] ${styles.customPrimaryButton}`}
+          <button
+            className={`px-16 py-6 rounded-lg bg-[#1E4640] text-white font-semibold text-base hover:bg-[#153a34] ${styles.customPrimaryButton} h-[50px] flex items-center justify-center`}
             onClick={handleSubmit}
-            loading={loading}
             disabled={loading}
-            htmlType="button"
+            type="button"
           >
-            {initialValues ? "Update" : "Submit"}
-          </Button>
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>{initialValues ? "Updating..." : "Submitting..."}</span>
+              </div>
+            ) : (
+              initialValues ? "Update" : "Submit"
+            )}
+          </button>
         </div>
       </Form>
     </div>

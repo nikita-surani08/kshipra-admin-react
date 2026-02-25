@@ -26,6 +26,7 @@ export interface LiveSession {
     date?: string;
     time?: string;
     duration?: string;
+    order?: number;
     isActive: boolean;
     createdAt: any;
     updatedAt: any;
@@ -75,11 +76,32 @@ export const addSession = async (sessionData: LiveSession) => {
   }
 };
 
+export const updateSessionOrders = async (sessions: LiveSession[]) => {
+  try {
+    // Update order field for all sessions
+    const updatePromises = sessions.map(async (session, index) => {
+      if (session.id) {
+        const sessionRef = doc(db, "live_sessions", session.id);
+        await updateDoc(sessionRef, { order: index + 1 });
+        return { ...session, order: index + 1 };
+      }
+      return session;
+    });
+
+    const updatedSessions = await Promise.all(updatePromises);
+    console.log("Session orders updated:", updatedSessions);
+    return updatedSessions;
+  } catch (error) {
+    console.error("Error updating session orders:", error);
+    throw new Error("Failed to update session orders");
+  }
+};
+
 export const getSessions = async (searchQuery: string = "") => {
   try {
     const sessionsRef = collection(db, "live_sessions");
     let q;
-
+    
     if (searchQuery && searchQuery.trim() !== "") {
       q = query(
         sessionsRef,
@@ -92,7 +114,8 @@ export const getSessions = async (searchQuery: string = "") => {
       q = query(
         sessionsRef,
         where("isActive", "==", true),
-        orderBy("createdAt", "desc")
+        orderBy("order"), // Order by the order field
+        orderBy("createdAt", "desc") // Secondary sort by creation date
       );
     }
 
@@ -101,7 +124,7 @@ export const getSessions = async (searchQuery: string = "") => {
       id: doc.id,
       ...doc.data(),
     })) as LiveSession[];
-
+    
     return {
       data: sessions,
     };

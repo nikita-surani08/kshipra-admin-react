@@ -4,11 +4,12 @@ import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
+import { DragOutlined } from "@ant-design/icons";
 import AddLiveSessionModal from "./AddLiveSessionModal";
 import RemoveLiveSessionModal from "./RemoveLiveSessionModal";
 import LiveSessionCard from "./LiveSessionCard";
-import { addSession } from "../../service/api/liveSession.api";
-import { getSessions, updateSession, deleteSession } from "../../service/api/liveSession.api";
+import ReorderLiveSessionModal from "./ReorderLiveSessionModal";
+import { addSession, getSessions, updateSession, deleteSession, updateSessionOrders } from "../../service/api/liveSession.api";
 import { LiveSession } from "../../service/api/liveSession.api";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
@@ -22,6 +23,7 @@ const manageLiveSession = () => {
   const [sessionList, setSessionList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [displaySessions, setDisplaySessions] = useState<any[]>([]);
+  const [reorderModalVisible, setReorderModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -112,12 +114,12 @@ const manageLiveSession = () => {
       
       // Map form data to API format
       const sessionData = {
-        mentor_name: values.mentor, // Changed from mentor_id to mentor_name
+        mentor_name: values.mentor || "",
         user_id: [], // Empty array as default
         is_free: values.sessionType === 'free',
-        name: values.sessionTitle,
-        description: values.sessionDescription,
-        meeting_link: values.sessionLink,
+        name: values.sessionTitle || "",
+        description: values.sessionDescription || "",
+        meeting_link: values.sessionLink || "",
         video_url: values.video_url || "",
         banner_url: values.banner || "",
         date: values.dateTime ? values.dateTime.format('YYYY-MM-DD') : '',
@@ -150,6 +152,25 @@ const manageLiveSession = () => {
     } catch (error) {
       console.error("Failed to save session:", error);
     }
+  };
+
+  const handleSaveReorder = async (reorderedSessions: LiveSession[]) => {
+    try {
+      // Update the order in Firestore
+      await updateSessionOrders(reorderedSessions);
+      
+      // Update the local state with new order
+      setSessionList(reorderedSessions);
+      setReorderModalVisible(false);
+      
+      console.log("Session order saved successfully");
+    } catch (error) {
+      console.error("Failed to save session order:", error);
+    }
+  };
+
+  const handleCancelReorder = () => {
+    setReorderModalVisible(false);
   };
 
   const handleRemoveClick = (session: any) => {
@@ -256,6 +277,17 @@ const manageLiveSession = () => {
                     Add Session
                   </button>
                 </div>
+                <div className="shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-white transition-all duration-300 hover:-translate-y-0.2">
+                  <DragOutlined className="text-[#1E4640]" />
+                  <button
+                    className="text-[#1E4640] font-medium"
+                    onClick={() => {
+                      setReorderModalVisible(true);
+                    }}
+                  >
+                    Reorder
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -323,7 +355,6 @@ const manageLiveSession = () => {
               setSelectedSession(null);
             }}
             onSave={handleAddSession}
-            loading={loading}
           />
         )}
       </div>
@@ -334,6 +365,15 @@ const manageLiveSession = () => {
         onCancel={handleRemoveCancel}
         onRemove={handleRemoveConfirm}
         loading={false}
+      />
+      
+      {/* Reorder Live Session Modal */}
+      <ReorderLiveSessionModal
+        visible={reorderModalVisible}
+        sessions={sessionList}
+        onCancel={handleCancelReorder}
+        onSave={handleSaveReorder}
+        loading={loading}
       />
     </div>
   );
