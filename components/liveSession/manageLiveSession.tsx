@@ -112,6 +112,11 @@ const manageLiveSession = () => {
     try {
       console.log("Session data:", values);
       
+      // Calculate next order number for new sessions
+      const nextOrder = sessionList.length > 0 
+        ? Math.max(...sessionList.map(s => s.order || 0)) + 1 
+        : 1;
+      
       // Map form data to API format
       const sessionData = {
         mentor_name: values.mentor || "",
@@ -128,6 +133,7 @@ const manageLiveSession = () => {
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        order: selectedSession && selectedSession.id ? selectedSession.order : nextOrder,
       };
 
       let result: LiveSession;
@@ -141,8 +147,9 @@ const manageLiveSession = () => {
       } else {
         // Add new session
         result = await addSession(sessionData);
-        // Add to the list
-        setSessionList(prev => [...prev, result]);
+        // Add to the list with proper order and sort
+        const newSession = { ...result, order: nextOrder };
+        setSessionList(prev => [...prev, newSession].sort((a, b) => (a.order || 0) - (b.order || 0)));
       }
 
       console.log("Session operation successful:", result);

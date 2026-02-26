@@ -6,9 +6,6 @@ import {
   doc,
   query,
   orderBy,
-  limit,
-  getDoc,
-  serverTimestamp,
   where,
 } from "firebase/firestore";
 import { db } from "../config/firebase.config";
@@ -28,8 +25,8 @@ export interface LiveSession {
     duration?: string;
     order?: number;
     isActive: boolean;
-    createdAt: any;
-    updatedAt: any;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export const addSession = async (sessionData: LiveSession) => {
@@ -47,6 +44,7 @@ export const addSession = async (sessionData: LiveSession) => {
       date: sessionData.date || "",
       time: sessionData.time || "",
       duration: sessionData.duration || "",
+      order: sessionData.order,
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -66,6 +64,7 @@ export const addSession = async (sessionData: LiveSession) => {
       date: sessionData.date || "",
       time: sessionData.time || "",
       duration: sessionData.duration || "",
+      order: sessionData.order,
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -134,7 +133,7 @@ export const getSessions = async (searchQuery: string = "") => {
   }
 };
 
-export const updateSession = async (sessionId: string, updateData: any) => {
+export const updateSession = async (sessionId: string, updateData: Partial<LiveSession>) => {
   try {
     const sessionRef = doc(db, "live_sessions", sessionId);
 
@@ -150,6 +149,7 @@ export const updateSession = async (sessionId: string, updateData: any) => {
       date: updateData.date,
       time: updateData.time,
       duration: updateData.duration,
+      order: updateData.order,
       updatedAt: new Date().toISOString(),
     });
     return { id: sessionId, ...updateData };
