@@ -1,11 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useRef, useState, useEffect } from "react";
 import dayjs from "dayjs";
 import Image from "next/image";
 import { Input, Button, Form, DatePicker } from "antd";
 import { Work_Sans } from "next/font/google"; // Leave this as is
-import { LinkOutlined } from "@ant-design/icons";
 import styles from "./liveSession.module.css";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../service/config/firebase.config";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });

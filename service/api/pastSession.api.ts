@@ -6,28 +6,26 @@ import {
   doc,
   query,
   orderBy,
-  limit,
-  getDoc,
-  serverTimestamp,
   where,
 } from "firebase/firestore";
 import { db } from "../config/firebase.config";
 
 export interface PastSession {
-    id?: string;
-    user_id: string[];
-    is_free: boolean;
-    name: string;
-    meeting_link: string;
-    video_url?: string;
-    banner_url?: string;
-    date?: string;
-    time?: string;
-    duration?: string;
-    isActive: boolean;
-    createdAt: any;
-    updatedAt: any;
-    order?: number;
+  id?: string;
+  user_id: string[];
+  is_free: boolean;
+  name: string;
+  meeting_link: string;
+  video_url?: string;
+  banner_url?: string;
+  date?: string;
+  time?: string;
+  duration?: string;
+  mentor_name?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  order?: number;
 }
 
 export const addSession = async (sessionData: PastSession) => {
@@ -43,6 +41,7 @@ export const addSession = async (sessionData: PastSession) => {
       date: sessionData.date || "",
       time: sessionData.time || "",
       duration: sessionData.duration || "",
+      mentor_name: sessionData.mentor_name || "",
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -60,6 +59,7 @@ export const addSession = async (sessionData: PastSession) => {
       date: sessionData.date || "",
       time: sessionData.time || "",
       duration: sessionData.duration || "",
+      mentor_name: sessionData.mentor_name || "",
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -127,7 +127,7 @@ export const getSessions = async (searchQuery: string = "") => {
   }
 };
 
-export const updateSession = async (sessionId: string, updateData: any) => {
+export const updateSession = async (sessionId: string, updateData: Partial<PastSession>) => {
   try {
     const sessionRef = doc(db, "past_sessions", sessionId);
 
@@ -141,6 +141,7 @@ export const updateSession = async (sessionId: string, updateData: any) => {
       date: updateData.date,
       time: updateData.time,
       duration: updateData.duration,
+      mentor_name: updateData.mentor_name,
       updatedAt: new Date().toISOString(),
     });
     return { id: sessionId, ...updateData };

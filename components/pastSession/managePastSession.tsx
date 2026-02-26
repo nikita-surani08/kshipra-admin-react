@@ -79,7 +79,7 @@ const managePastSession = () => {
         sessionTitle: session.name || "",
         description: session.name || "", // Using name as description since description might not exist
         sessionLink: session.meeting_link || "",
-        sessionType: session.is_free ? "free" : "premium"
+        sessionType: session.is_free ? "free" : "premium",
       };
     });
     setDisplaySessions(mapped);
@@ -121,6 +121,7 @@ const managePastSession = () => {
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        mentor_name: values.mentor,
       };
 
       let result: PastSession;
@@ -195,7 +196,8 @@ const managePastSession = () => {
     sessionLink: selectedSession.meeting_link,
     sessionType: selectedSession.is_free ? 'free' : 'premium',
     dateTime: selectedSession.date && selectedSession.time ? dayjs(`${selectedSession.date} ${selectedSession.time}`, 'YYYY-MM-DD HH:mm') : undefined,
-    banner: selectedSession.banner_url || ""
+    banner: selectedSession.banner_url || "",
+    mentor: selectedSession.mentor_name || ""
   } : undefined;
 
   const handleEditClick = () => {

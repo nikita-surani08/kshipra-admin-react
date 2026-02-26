@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import dayjs from "dayjs";
 import Image from "next/image";
 import { Input, Button, Form, Select, DatePicker } from "antd";
-import { Work_Sans } from "next/font/google"; 
+import { Work_Sans } from "next/font/google";
 import styles from "./pastSession.module.css";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../service/config/firebase.config";
@@ -15,18 +15,18 @@ interface AddPastSessionModalProps {
   initialValues?: any;
 }
 
-const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({ 
-  onCancel, 
-  onSave, 
-  initialValues
+const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
+  onCancel,
+  onSave,
+  initialValues,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const bannerFileInputRef = useRef<HTMLInputElement | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [sessionType, setSessionType] = useState<'free' | 'premium'>('free');
-  const [bannerError, setBannerError] = useState<string>('');
+  const [sessionType, setSessionType] = useState<"free" | "premium">("free");
+  const [bannerError, setBannerError] = useState<string>("");
 
   useEffect(() => {
     console.log("🟠 MODAL useEffect RUNNING");
@@ -35,7 +35,7 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
     if (initialValues) {
       console.log("initialValues keys:", Object.keys(initialValues));
     }
-    
+
     // Map raw session data to form format
     let formValues;
     if (initialValues) {
@@ -43,22 +43,27 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
         sessionTitle: initialValues.name || "",
         sessionDescription: initialValues.description || "",
         sessionLink: initialValues.meeting_link || "",
-        sessionType: initialValues.is_free ? 'free' : 'premium',
-        dateTime: dayjs(`${initialValues.date} ${initialValues.time}`, 'YYYY-MM-DD HH:mm'),
-        banner: initialValues.banner_url || ""
+        sessionType: initialValues.is_free ? "free" : "premium",
+        dateTime: dayjs(
+          `${initialValues.date} ${initialValues.time}`,
+          "YYYY-MM-DD HH:mm",
+        ),
+        banner: initialValues.banner_url || "",
+        mentor: initialValues.mentor_name || "",
       };
     }
-    
+
     form.resetFields();
     if (formValues) {
       form.setFieldsValue(formValues);
       console.log("form values after setFieldsValue:", form.getFieldsValue());
       if (formValues.banner) setBannerPreview(formValues.banner);
-      if (formValues.sessionType) setSessionType(formValues.sessionType as 'free' | 'premium');
+      if (formValues.sessionType)
+        setSessionType(formValues.sessionType as "free" | "premium");
     } else {
       setBannerPreview(null);
       setBannerFile(null);
-      setSessionType('free');
+      setSessionType("free");
     }
   }, [initialValues, form]);
 
@@ -71,13 +76,13 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
     if (file) {
       setBannerPreview(URL.createObjectURL(file));
       setBannerFile(file);
-      setBannerError(''); // Clear error when banner is selected
+      setBannerError(""); // Clear error when banner is selected
     }
   };
 
   const handleSubmit = async () => {
     console.log("Submit clicked");
-    
+
     // Set loading immediately when submit is clicked
     setLoading(true);
 
@@ -89,29 +94,29 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
 
     // Check banner validation first (custom validation)
     if (!bannerFile && !bannerPreview) {
-      setBannerError('Banner is required - please upload a banner image');
+      setBannerError("Banner is required - please upload a banner image");
       hasErrors = true;
     } else {
-      setBannerError(''); // Clear error if banner exists
+      setBannerError(""); // Clear error if banner exists
     }
 
     // Check session link validation manually
-    if (!values.sessionLink || values.sessionLink.trim() === '') {
+    if (!values.sessionLink || values.sessionLink.trim() === "") {
       // Manually trigger session link validation error
       form.setFields([
         {
-          name: 'sessionLink',
-          errors: ['Enter session link']
-        }
+          name: "sessionLink",
+          errors: ["Enter session link"],
+        },
       ]);
       hasErrors = true;
     } else {
       // Clear session link error if valid
       form.setFields([
         {
-          name: 'sessionLink',
-          errors: []
-        }
+          name: "sessionLink",
+          errors: [],
+        },
       ]);
     }
 
@@ -123,7 +128,7 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
 
     try {
       // Validate other form fields (this will show form field errors)
-      await form.validateFields(['sessionTitle', 'sessionLink', 'video_url']);
+      await form.validateFields();
       console.log("Validation successful", values);
 
       let bannerUrl = bannerPreview;
@@ -131,7 +136,10 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
       // Upload banner to Firebase Storage if file exists
       if (bannerFile) {
         try {
-          const storageRef = ref(storage, `uploads/sessions/${Date.now()}_${bannerFile.name}`);
+          const storageRef = ref(
+            storage,
+            `uploads/sessions/${Date.now()}_${bannerFile.name}`,
+          );
           const snapshot = await uploadBytes(storageRef, bannerFile);
           bannerUrl = await getDownloadURL(snapshot.ref);
           console.log("Banner uploaded:", bannerUrl);
@@ -147,9 +155,8 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
         ...values,
         sessionType, // Include the sessionType state
         banner: bannerUrl,
-        bannerFile
+        bannerFile,
       });
-
     } catch (errorInfo: any) {
       console.error("Validation failed or submission error:", errorInfo);
       setLoading(false); // Reset loading if validation fails
@@ -165,7 +172,7 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
         <div className="mb-8">
           <div
             onClick={handleBannerClick}
-            className={`w-full border-2 border-dashed ${bannerError ? 'border-red-400' : 'border-gray-400'} rounded-2xl p-12 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-gray-500 transition relative min-h-[200px]`}
+            className={`w-full border-2 border-dashed ${bannerError ? "border-red-400" : "border-gray-400"} rounded-2xl p-12 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-gray-500 transition relative min-h-[200px]`}
           >
             {bannerPreview ? (
               <Image
@@ -184,23 +191,23 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
                   height={40}
                   className="text-gray-500"
                 />
-                
+
                 {/* Text */}
                 <h3 className="text-[#1E4640] font-semibold text-lg text-center">
                   Drag and Drop Your banner here, or click to browser
                 </h3>
-                
+
                 {/* Upload Button */}
                 <Button
                   className={`bg-[#1E4640] text-white px-6 py-2 rounded-md font-medium ${styles.customPrimaryButton}`}
                   style={{
-                    backgroundColor: '#1E4640',
-                    color: 'white',
-                    border: 'none'
+                    backgroundColor: "#1E4640",
+                    color: "white",
+                    border: "none",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#1E4640';
-                    e.currentTarget.style.color = 'white';
+                    e.currentTarget.style.backgroundColor = "#1E4640";
+                    e.currentTarget.style.color = "white";
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -213,18 +220,18 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
                 {/* Error Message - More Prominent */}
                 {bannerError && (
                   <div className="text-red-600 text-lg font-semibold mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                     {bannerError}
+                    {bannerError}
                   </div>
                 )}
               </>
             )}
-            
+
             {/* Hidden File Input */}
             <input
               type="file"
               accept="image/*"
               ref={bannerFileInputRef}
-              style={{ display: 'none' }}
+              style={{ display: "none" }}
               onChange={handleBannerChange}
             />
           </div>
@@ -245,10 +252,7 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
             <label className="text-gray-700 font-semibold text-sm block mb-2">
               Session Title
             </label>
-            <Form.Item
-              name="sessionTitle"
-              className="mb-0"
-            >
+            <Form.Item name="sessionTitle" className="mb-0">
               <Input
                 placeholder="Enter session title"
                 className="p-3 rounded-xl border border-gray-300 text-base"
@@ -267,7 +271,14 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
             >
               <Input
                 placeholder="http://"
-                prefix={<Image src="/images/Link.svg" width={16} height={16} alt="Link" />}
+                prefix={
+                  <Image
+                    src="/images/Link.svg"
+                    width={16}
+                    height={16}
+                    alt="Link"
+                  />
+                }
                 className="p-3 rounded-xl border border-gray-300 text-base"
               />
             </Form.Item>
@@ -302,6 +313,49 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-300 my-8"></div>
+
+        {/* Mentor Details */}
+        <div className="flex flex-col gap-6 flex-1 overflow-y-auto no-scrollbar">
+          {/* Section Title */}
+          <h2 className="text-[#1E4640] font-bold text-xl">Mentor Details</h2>
+
+          {/* Mentor Name Field */}
+          <div>
+            <label className="text-gray-700 font-semibold text-sm block mb-2">
+              Mentor Name
+            </label>
+            <Form.Item name="mentor" className="mb-0">
+              <Input
+                placeholder="Enter mentor name"
+                className="p-3 rounded-xl border border-gray-300 text-base"
+              />
+            </Form.Item>
+          </div>
+
+          {/* Date and Time Field */}
+          <div style={{ display: 'none' }}>
+            <label className="text-gray-700 font-semibold text-sm block mb-2">
+              Date and Time
+            </label>
+            <Form.Item name="dateTime" className="mb-0">
+              <DatePicker
+                showTime
+                placeholder="Select date and time"
+                className="w-full"
+                size="large"
+                style={{
+                  borderRadius: "12px",
+                  border: "1px solid #d1d5db",
+                }}
+                format="YYYY-MM-DD hh:mm A"
+              />
+            </Form.Item>
+          </div>
+        </div>
+        
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 mt-12 pt-8 border-t border-gray-300">
           <Button
@@ -321,8 +375,10 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 <span>{initialValues ? "Updating..." : "Submitting..."}</span>
               </div>
+            ) : initialValues ? (
+              "Update"
             ) : (
-              initialValues ? "Update" : "Submit"
+              "Submit"
             )}
           </button>
         </div>
