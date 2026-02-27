@@ -96,13 +96,13 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
         setBannerError("");
       }
 
-      // Check session link validation
-      if (!values.sessionLink || values.sessionLink.trim() === '') {
+      // Check session link validation (optional now)
+      if (values.sessionLink && values.sessionLink.trim() === '') {
         // Manually trigger session link validation error
         form.setFields([
           {
             name: 'sessionLink',
-            errors: ['Enter session link']
+            errors: ['Session link cannot be empty']
           }
         ]);
         hasErrors = true;
@@ -239,7 +239,7 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
           </h2>
 
           {/* Session Title Field */}
-          <div>
+          {/* <div>
             <label className="text-gray-700 font-semibold text-sm block mb-2">
               Session Title
             </label>
@@ -252,10 +252,10 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
                 className="p-3 rounded-xl border border-gray-300 text-base"
               />
             </Form.Item>
-          </div>
+          </div> */}
 
           {/* Session Description Field */}
-          <div>
+          {/* <div>
             <label className="text-gray-700 font-semibold text-sm block mb-2">
               Session Description
             </label>
@@ -269,7 +269,7 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
                 className="p-3 rounded-xl border border-gray-300 text-base resize-none"
               />
             </Form.Item>
-          </div>
+          </div> */}
 
           {/* Session Link Field */}
           <div>
@@ -278,7 +278,6 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
             </label>
             <Form.Item
               name="sessionLink"
-              rules={[{ required: true, message: "Enter session link" }]}
               className="mb-0"
             >
               <Input
@@ -320,17 +319,17 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
         </div>
 
         {/* Divider */}
-        <div className="border-t border-gray-300 my-8"></div>
+        {/* <div className="border-t border-gray-300 my-8"></div> */}
 
         {/* Mentor Details */}
-        <div className="flex flex-col gap-6 flex-1 overflow-y-auto no-scrollbar">
+        {/* <div className="flex flex-col gap-6 flex-1 overflow-y-auto no-scrollbar"> */}
           {/* Section Title */}
-          <h2 className="text-[#1E4640] font-bold text-xl">
+          {/* <h2 className="text-[#1E4640] font-bold text-xl">
             Mentor Details
-          </h2>
+          </h2> */}
 
           {/* Mentor Name Field */}
-          <div>
+          {/* <div>
             <label className="text-gray-700 font-semibold text-sm block mb-2">
               Mentor Name
             </label>
@@ -343,10 +342,10 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
                 className="p-3 rounded-xl border border-gray-300 text-base"
               />
             </Form.Item>
-          </div>
+          </div> */}
 
           {/* Date and Time Field */}
-          <div>
+          {/* <div>
             <label className="text-gray-700 font-semibold text-sm block mb-2">
               Date and Time
             </label>
@@ -366,8 +365,8 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
                 format="YYYY-MM-DD hh:mm A"
               />
             </Form.Item>
-          </div>
-        </div>
+          </div> */}
+        {/* </div> */}
 
         <div className="flex justify-end gap-3 mt-12 pt-8 border-t border-gray-300">
           <Button

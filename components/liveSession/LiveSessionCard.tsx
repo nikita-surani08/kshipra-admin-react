@@ -98,12 +98,12 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
         </Dropdown>
         
         {/* Overlay Text */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+        {/* <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
           <h3 className="text-xl font-bold mb-1">{name}</h3>
           <p className="text-sm opacity-90 mb-2">{time}</p>
           <p className="text-sm font-medium">{sessionTitle}</p>
           <p className="text-xs opacity-80 mt-1 line-clamp-2">{description}</p>
-        </div>
+        </div> */}
       </div>
       
       {/* Bottom Section */}
