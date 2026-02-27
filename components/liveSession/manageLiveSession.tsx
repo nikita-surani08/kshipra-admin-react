@@ -14,7 +14,7 @@ import { LiveSession } from "../../service/api/liveSession.api";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
-const manageLiveSession = () => {
+const ManageLiveSession = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<"list" | "add">("list");
   const [selectedSession, setSelectedSession] = useState<any>(null);
@@ -30,6 +30,7 @@ const manageLiveSession = () => {
       setLoading(true);
       try {
         const sessionsResponse = await getSessions();
+        console.log("Fetched sessions:", sessionsResponse);  
         setSessionList(sessionsResponse.data);
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -118,15 +119,15 @@ const manageLiveSession = () => {
         : 1;
       
       // Map form data to API format
-      const sessionData = {
+      const sessionData: LiveSession = {
         mentor_name: values.mentor || "",
         user_id: [], // Empty array as default
         is_free: values.sessionType === 'free',
         name: values.sessionTitle || "",
         description: values.sessionDescription || "",
-        meeting_link: values.sessionLink || "",
+        meeting_link: values.sessionLink || "", // This should be validated in form
         video_url: values.video_url || "",
-        banner_url: values.banner || "",
+        banner_url: values.banner || "", // This should be validated in form
         date: values.dateTime ? values.dateTime.format('YYYY-MM-DD') : '',
         time: values.dateTime ? values.dateTime.format('HH:mm') : '',
         duration: "", // Default duration
@@ -139,7 +140,7 @@ const manageLiveSession = () => {
       let result: LiveSession;
       if (selectedSession && selectedSession.id) {
         // Update existing session
-        result = await updateSession(selectedSession.id, sessionData);
+        result = await updateSession(selectedSession.id, sessionData as Partial<LiveSession>);
         // Update the session in the list
         setSessionList(prev => prev.map(session => 
           session.id === selectedSession.id ? { ...session, ...sessionData, id: selectedSession.id } : session
@@ -386,4 +387,4 @@ const manageLiveSession = () => {
   );
 };
 
-export default manageLiveSession;
+export default ManageLiveSession;

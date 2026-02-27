@@ -12,19 +12,19 @@ import { db } from "../config/firebase.config";
 
 export interface PastSession {
   id?: string;
-  user_id: string[];
-  is_free: boolean;
-  name: string;
-  meeting_link: string;
+  user_id?: string[];
+  is_free?: boolean;
+  name?: string;
+  meeting_link?: string;
   video_url?: string;
   banner_url?: string;
   date?: string;
   time?: string;
   duration?: string;
   mentor_name?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   order?: number;
 }
 

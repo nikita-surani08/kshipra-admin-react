@@ -46,7 +46,7 @@ const managePastSession = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = sessionList.filter(session => {
-        return session.name.toLowerCase().includes(query);
+        return session.name?.toLowerCase().includes(query) || false;
       });
     }
     

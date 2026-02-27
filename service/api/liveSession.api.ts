@@ -12,21 +12,21 @@ import { db } from "../config/firebase.config";
 
 export interface LiveSession {
     id?: string;
-    mentor_name: string;
-    user_id: string[];
+    mentor_name?: string;
+    user_id?: string[];
     is_free: boolean;
-    name: string;
-    description: string;
+    name?: string;
+    description?: string;
     meeting_link: string;
     video_url?: string;
-    banner_url?: string;
+    banner_url: string;
     date?: string;
     time?: string;
     duration?: string;
     order?: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
+    isActive?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export const addSession = async (sessionData: LiveSession) => {
@@ -152,7 +152,7 @@ export const updateSession = async (sessionId: string, updateData: Partial<LiveS
       order: updateData.order,
       updatedAt: new Date().toISOString(),
     });
-    return { id: sessionId, ...updateData };
+    return { id: sessionId, ...updateData } as LiveSession;
   } catch (error) {
     console.error("Error updating session:", error);
     throw new Error("Failed to update session");
