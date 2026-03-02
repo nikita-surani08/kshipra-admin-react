@@ -82,7 +82,7 @@ const AddFlashCardModal: React.FC<AddFlashCardModalProps> = ({
         selectedTopic,
         page,
         pageSize,
-        lastVisible,
+        { [page - 1]: lastVisible },
         searchNoteValue
       );
 
