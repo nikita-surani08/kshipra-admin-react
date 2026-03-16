@@ -162,6 +162,7 @@ export const getBookings = async (
 
     for (const docSnap of snap.docs) {
       const data: any = docSnap.data();
+      const orderNotes = data?.paymentDetails?.order?.notes || data?.paymentDetails?.notes || {};
 
       // fetch mentor name
       let mentorName = data.mentorId || "-";
@@ -213,7 +214,7 @@ export const getBookings = async (
         "start",
         "slotStart",
         "slot_start",
-      ]) || normalizeStringField(data?.paymentDetails?.notes, ["startTime", "start_time"]) || normalizeStringField(data?.paymentDetails, ["startTime", "start_time"]);
+      ]) || normalizeStringField(orderNotes, ["startTime", "start_time"]) || normalizeStringField(data?.paymentDetails, ["startTime", "start_time"]);
 
       const endTime = normalizeStringField(data, [
         "endTime",
@@ -221,12 +222,21 @@ export const getBookings = async (
         "end",
         "slotEnd",
         "slot_end",
-      ]) || normalizeStringField(data?.paymentDetails?.notes, ["endTime", "end_time"]) || normalizeStringField(data?.paymentDetails, ["endTime", "end_time"]);
+      ]) || normalizeStringField(orderNotes, ["endTime", "end_time"]) || normalizeStringField(data?.paymentDetails, ["endTime", "end_time"]);
 
-      const sessionDateRaw = data.sessionDate ?? data.session_date ?? data.date ?? data.bookingDate ?? data.createdAt;
+      const sessionDateRaw =
+        orderNotes?.sessionDate ??
+        orderNotes?.session_date ??
+        data.sessionDate ??
+        data.session_date ??
+        data.date ??
+        data.bookingDate ??
+        data.createdAt;
       const sessionDate = formatSessionDate(sessionDateRaw);
 
-      const timeSlot = `${sessionDate || ""} ${startTime || ""}`.trim();
+      const timeSlot = startTime && endTime
+        ? `${startTime} - ${endTime}`
+        : startTime || endTime || "-";
 
       const durationVal = computeDuration(startTime, endTime);
       // debug log to help trace parsing issues
