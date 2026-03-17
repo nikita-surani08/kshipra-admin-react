@@ -104,25 +104,66 @@ const normalizeStringField = (obj: any, keys: string[]) => {
   return undefined;
 };
 
-const formatSessionDate = (val: any) => {
+const formatDateOnly = (val: any) => {
   if (!val) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "object" && typeof val.toDate === "function") {
-    const d: Date = val.toDate();
-    return d.toISOString().slice(0, 10);
-  }
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val);
+
+  const date =
+    typeof val === "object" && typeof val.toDate === "function"
+      ? val.toDate()
+      : val instanceof Date
+        ? val
+        : new Date(val);
+
+  if (isNaN(date.getTime())) return String(val);
+
+  return date.toISOString().slice(0, 10);
 };
 
-const formatBookingDate = (val: any) => {
-  if (!val) return "";
-  if (typeof val === "string") return val;
+const formatTimeTo12Hour = (val: any) => {
+  if (!val && val !== 0) return "";
+
+  const formatHoursMinutes = (hours: number, minutes: number) => {
+    const normalizedHours = ((hours % 24) + 24) % 24;
+    const period = normalizedHours >= 12 ? "PM" : "AM";
+    const hour12 = normalizedHours % 12 || 12;
+    return `${hour12.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")} ${period}`;
+  };
+
+  if (typeof val === "string") {
+    const isoDate = new Date(val);
+    if (val.includes("T") && !isNaN(isoDate.getTime())) {
+      return formatHoursMinutes(isoDate.getHours(), isoDate.getMinutes());
+    }
+
+    const timeMatch = val.match(/^\s*(\d{1,2}):(\d{2})(?:\s*([AaPp][Mm]))?\s*$/);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = parseInt(timeMatch[2], 10);
+      const meridiem = timeMatch[3];
+
+      if (meridiem) {
+        const isPm = /pm/i.test(meridiem);
+        if (isPm && hours < 12) hours += 12;
+        if (!isPm && hours === 12) hours = 0;
+      }
+
+      return formatHoursMinutes(hours, minutes);
+    }
+
+    return val;
+  }
+
   if (typeof val === "object" && typeof val.toDate === "function") {
     const d: Date = val.toDate();
-    return d.toISOString().slice(0, 16).replace('T', ' ');
+    return formatHoursMinutes(d.getHours(), d.getMinutes());
   }
-  if (val instanceof Date) return val.toISOString().slice(0, 16).replace('T', ' ');
+
+  if (val instanceof Date) {
+    return formatHoursMinutes(val.getHours(), val.getMinutes());
+  }
+
   return String(val);
 };
 
@@ -197,15 +238,34 @@ export const getBookings = async (
       const amount = data.amount ?? data.paymentDetails?.amount ?? 0;
       const currency = data.currency ?? data.paymentDetails?.currency ?? "INR";
 
-      const paymentStatusRaw = (data.status || data.paymentDetails?.status || "").toString().toLowerCase();
-      let paymentStatus = "Pending";
-      if (paymentStatusRaw === "paid" || paymentStatusRaw === "captured") paymentStatus = "Paid";
-      else if (paymentStatusRaw === "refunded" || data.refund_status) paymentStatus = "Refund";
-
       const mentorStatusRaw = (data.mentorStatus || "").toString().toLowerCase();
       let bookingStatus = "Accepted";
       if (mentorStatusRaw === "rejected") bookingStatus = "Rejected";
       else if (mentorStatusRaw === "pending") bookingStatus = "Pending";
+
+      const paymentStatusRaw = (data.status || data.paymentDetails?.status || "").toString().toLowerCase();
+      const refundStatusRaw = (data.refundStatus || "").toString().toLowerCase();
+
+      let paymentStatus = "Pending";
+      if (bookingStatus === "Rejected" && refundStatusRaw) {
+        if (refundStatusRaw === "processed" || refundStatusRaw === "completed" || refundStatusRaw === "refunded") {
+          paymentStatus = "Refunded";
+        } else if (refundStatusRaw === "pending" || refundStatusRaw === "initiated") {
+          paymentStatus = "Refund Pending";
+        } else if (refundStatusRaw === "failed") {
+          paymentStatus = "Refund Failed";
+        } else {
+          paymentStatus = refundStatusRaw
+            .split(/[_\s]+/)
+            .filter(Boolean)
+            .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(" ");
+        }
+      } else if (paymentStatusRaw === "paid" || paymentStatusRaw === "captured") {
+        paymentStatus = "Paid";
+      } else if (paymentStatusRaw === "refunded" || refundStatusRaw === "refunded") {
+        paymentStatus = "Refunded";
+      }
 
       // Normalize start/end time and session date from various possible shapes
       const startTime = normalizeStringField(data, [
@@ -232,17 +292,21 @@ export const getBookings = async (
         data.date ??
         data.bookingDate ??
         data.createdAt;
-      const sessionDate = formatSessionDate(sessionDateRaw);
+      const sessionDate = formatDateOnly(sessionDateRaw);
+      const createdDate = formatDateOnly(data.createdAt);
 
-      const timeSlot = startTime && endTime
-        ? `${startTime} - ${endTime}`
-        : startTime || endTime || "-";
+      const formattedStartTime = formatTimeTo12Hour(startTime);
+      const formattedEndTime = formatTimeTo12Hour(endTime);
+
+      const timeSlot = formattedStartTime && formattedEndTime
+        ? `${formattedStartTime} - ${formattedEndTime}`
+        : formattedStartTime || formattedEndTime || "-";
 
       const durationVal = computeDuration(startTime, endTime);
       // debug log to help trace parsing issues
       try {
         // eslint-disable-next-line no-console
-        console.debug("booking-debug", { id: docSnap.id, startTime, endTime, sessionDate, durationVal, raw: { ...(data || {}) } });
+        console.debug("booking-debug", { id: docSnap.id, startTime, endTime, sessionDate, createdDate, durationVal, raw: { ...(data || {}) } });
       } catch (e) {
         // ignore
       }
@@ -255,9 +319,10 @@ export const getBookings = async (
         timeSlot,
         duration: durationVal,
         amount: formatAmount(amount, currency),
+        bookingDate: sessionDate,
+        createdDate,
         bookingStatus,
         paymentStatus,
-        bookingDate: formatBookingDate(data.createdAt),
         raw: data,
       });
     }

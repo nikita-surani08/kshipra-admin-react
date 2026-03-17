@@ -5,13 +5,11 @@ import { Work_Sans } from "next/font/google";
 import { useState, useEffect } from "react";
 import BookingsList, { Booking } from "./BookingsList"; // Import new list
 import "./bookings.css";
-import { Button } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"], subsets: ["latin"] });
 
 import { getBookings } from "../../service/api/bookings.api";
-import Loader from "../loader";
 
 const ManageBookings = () => {
   const [bookingsData, setBookingsData] = useState<Booking[]>([]);
@@ -21,7 +19,6 @@ const ManageBookings = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalBookings, setTotalBookings] = useState(0);
-  const [lastVisibleDoc, setLastVisibleDoc] = useState<any>(null);
   const [lastVisibleDocs, setLastVisibleDocs] = useState<Record<number, any | null>>({});
 
   useEffect(() => {
@@ -35,7 +32,6 @@ const ManageBookings = () => {
           setBookingsData(res.data);
           setTotalBookings(res.total);
           if (res.lastVisible) {
-            setLastVisibleDoc(res.lastVisible);
             setLastVisibleDocs(prev => ({ ...prev, [currentPage]: res.lastVisible }));
           }
         }
@@ -110,12 +106,13 @@ const ManageBookings = () => {
         "Student Name",
         "Student Email",
         "Mentor Name",
+        "Booking Date",
         "Time Slot",
         "Duration",
         "Amount",
+        "Created Date",
         "Booking Status",
-        "Payment Status",
-        "Booking Date"
+        "Payment Status"
       ];
 
       // CSV rows
@@ -125,12 +122,13 @@ const ManageBookings = () => {
           `"${booking.studentName || ""}"`,
           `"${booking.studentEmail || ""}"`,
           `"${booking.mentorName || ""}"`,
+          `"${booking.bookingDate || ""}"`,
           `"${booking.timeSlot || ""}"`,
           `"${booking.duration || ""}"`,
           `"${booking.amount || ""}"`,
+          `"${booking.createdDate || ""}"`,
           `"${booking.bookingStatus || ""}"`,
-          `"${booking.paymentStatus || ""}"`,
-          `"${booking.bookingDate || ""}"`
+          `"${booking.paymentStatus || ""}"`
         ].join(","))
       ];
 

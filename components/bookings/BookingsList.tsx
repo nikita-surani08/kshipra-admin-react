@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Table, Typography, Tag } from "antd";
+import { Table, Typography } from "antd";
 
 const { Text } = Typography;
 
@@ -14,6 +14,7 @@ export interface Booking {
   duration: string;
   amount: string;
   bookingDate: string;
+  createdDate: string;
   bookingStatus: "Accepted" | "Rejected" | "Pending";
   paymentStatus: "Paid" | "Pending" | "Refund";
 }
@@ -70,12 +71,23 @@ const BookingsList: React.FC<BookingsListProps> = ({
       ),
     },
     {
+      title: "Booking Date",
+      dataIndex: "bookingDate",
+      key: "bookingDate",
+      width: "12%",
+      render: (text: string) => (
+        <Text ellipsis style={{ maxWidth: "120px" }}>
+          {text}
+        </Text>
+      ),
+    },
+    {
       title: "Time Slot",
       dataIndex: "timeSlot",
       key: "timeSlot",
       width: "13%",
       render: (text: string) => (
-        <Text ellipsis style={{ maxWidth: "130px" }}>
+        <Text style={{ whiteSpace: "nowrap" }}>
           {text}
         </Text>
       ),
@@ -143,9 +155,9 @@ const BookingsList: React.FC<BookingsListProps> = ({
       },
     },
     {
-      title: "Booking Date",
-      dataIndex: "bookingDate",
-      key: "bookingDate",
+      title: "Created Date",
+      dataIndex: "createdDate",
+      key: "createdDate",
       width: "15%",
       render: (text: string) => (
         <Text ellipsis style={{ maxWidth: "150px" }}>
