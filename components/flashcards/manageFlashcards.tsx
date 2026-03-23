@@ -355,6 +355,7 @@ const ManageFlashcards = () => {
       setSuccessMessage(null);
       setIsErrorAlertOpen(true);
       setIsSuccessAlertOpen(false);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -630,6 +631,7 @@ const ManageFlashcards = () => {
         onSave={handleUploadFlashcard}
         subjects={subject}
         topics={topic}
+        loading={loading}
       />
 
       {/* Edit Flashcard Modal */}

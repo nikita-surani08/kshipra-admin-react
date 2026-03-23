@@ -13,6 +13,8 @@ import {
   where,
   getCountFromServer,
   runTransaction,
+  writeBatch,
+  increment,
 } from "firebase/firestore";
 import { db } from "../config/firebase.config";
 import { getStorage, ref, uploadBytes } from "firebase/storage";
@@ -291,130 +293,145 @@ export const uploadFlashcardsFromExcel = async (
   console.log("Note map keys:", Array.from(noteMap.keys()));
 
   let successCount = 0;
-  const topicRef = doc(db, "topics", topicId);
+  let skippedCount = 0;
+  const noteFlashcardIncrements = new Map<string, number>();
 
-  // Use transaction to update total_flashcards count atomically
-  await runTransaction(db, async (tx) => {
-    // Get current topic data
-    const topicSnap = await tx.get(topicRef);
-    if (!topicSnap.exists()) {
-      throw new Error("Topic not found");
+  // Get the highest order number for existing flashcards in this topic
+  const flashcardsQuery = query(
+    collection(db, "flashcards"),
+    where("topic_id", "==", topicId),
+    where("is_active", "==", true),
+    orderBy("order", "desc"),
+    limit(1)
+  );
+  const flashcardsSnap = await getDocs(flashcardsQuery);
+  let nextOrder = 1;
+
+  if (!flashcardsSnap.empty) {
+    const highestOrderFlashcard = flashcardsSnap.docs[0].data();
+    nextOrder = (highestOrderFlashcard.order || 0) + 1;
+  }
+
+  let batch = writeBatch(db);
+  let batchOps = 0;
+
+  const commitBatch = async () => {
+    if (batchOps === 0) return;
+    await batch.commit();
+    batch = writeBatch(db);
+    batchOps = 0;
+  };
+
+  for (const row of dataRows) {
+    const noteTitle = normalize(row[noteTitleIndex]);
+    const questionTitle = questionTitleIndex >= 0 ? normalize(row[questionTitleIndex]) : "";
+    const question = normalize(row[questionIndex]);
+    const answerTitle = answerTitleIndex >= 0 ? normalize(row[answerTitleIndex]) : "";
+    const answer = normalize(row[answerIndex]);
+    const tag = tagIndex >= 0 ? normalize(row[tagIndex]) : "";
+
+    if (!noteTitle || !question || !answer) {
+      skippedCount += 1;
+      continue;
     }
 
-    const topicData = topicSnap.data();
-    const currentTotalFlashcards = topicData?.total_flashcards || 0;
+    const note = noteMap.get(normalizeKey(noteTitle));
+    let noteId: string;
 
-    // Get the highest order number for existing flashcards in this topic
-    const flashcardsQuery = query(
-      collection(db, "flashcards"),
-      where("topic_id", "==", topicId),
-      where("is_active", "==", true),
-      orderBy("order", "desc"),
-      limit(1)
-    );
-    
-    const flashcardsSnap = await getDocs(flashcardsQuery);
-    let nextOrder = 1;
-    
-    if (!flashcardsSnap.empty) {
-      const highestOrderFlashcard = flashcardsSnap.docs[0].data();
-      nextOrder = (highestOrderFlashcard.order || 0) + 1;
-    }
-
-    for (const row of dataRows) {
-      const noteTitle = normalize(row[noteTitleIndex]);
-      const questionTitle = questionTitleIndex >= 0 ? normalize(row[questionTitleIndex]) : "";
-      const question = normalize(row[questionIndex]);
-      const answerTitle = answerTitleIndex >= 0 ? normalize(row[answerTitleIndex]) : "";
-      const answer = normalize(row[answerIndex]);
-      const tag = tagIndex >= 0 ? normalize(row[tagIndex]) : "";
-
-      console.log("Processing row:", {
-        originalRow: row,
-        noteTitle,
-        questionTitle,
-        question,
-        answerTitle,
-        answer,
-        tag,
-      });
-
-      if (!noteTitle || !question || !answer) {
-        console.log("Skipping row - missing required fields:", {
-          noteTitle: !!noteTitle,
-          questionTitle: !!questionTitle,
-          question: !!question,
-          answerTitle: !!answerTitle,
-          answer: !!answer
-        });
-        continue;
-      }
-
-      const note = noteMap.get(normalizeKey(noteTitle));
-      console.log("Looking for note:", {
-        searchTitle: noteTitle,
-        searchKey: normalizeKey(noteTitle),
-        found: note,
-        availableKeys: Array.from(noteMap.keys())
-      });
-      
-      let noteId: string;
-      if (!note) {
-        console.log("Creating new note:", noteTitle);
-        try {
-          const newNote = await addNote({
-            subject_id: subjectId,
-            topic_id: topicId,
-            title: noteTitle,
-            pdf_url: "",
-          });
-          noteId = newNote.document_id;
-          console.log(`Note "${noteTitle}" created successfully`);
-        } catch (err) {
-          console.error("Error creating note:", err);
-          continue;
-        }
-      } else {
-        noteId = note.id;
-      }
-
+    if (!note) {
       try {
-        const nowIso = new Date().toISOString();
-        const docRef = doc(collection(db, "flashcards"));
-        
-        tx.set(docRef, {
+        const newNote = await addNote({
           subject_id: subjectId,
           topic_id: topicId,
-          note_id: noteId,
-          question,
-          question_title: questionTitle,
-          answer_title: answerTitle,
-          answer,
-          tag,
-          order: nextOrder,
-          is_active: true,
-          created_at: nowIso,
-          updated_at: nowIso,
-          document_id: docRef.id,
+          title: noteTitle,
+          pdf_url: "",
         });
+        noteId = newNote.document_id;
+        noteMap.set(normalizeKey(noteTitle), { id: noteId, title: noteTitle });
+      } catch (err) {
+        console.error("Error creating note:", err);
+        skippedCount += 1;
+        continue;
+      }
+    } else {
+      noteId = note.id;
+    }
 
-        // Increment order for next flashcard
-        nextOrder += 1;
-        successCount += 1;
-      } catch (error) {
-        console.error("Failed to import flashcard row:", error);
+    const nowIso = new Date().toISOString();
+    const docRef = doc(collection(db, "flashcards"));
+    batch.set(docRef, {
+      subject_id: subjectId,
+      topic_id: topicId,
+      note_id: noteId,
+      question,
+      question_title: questionTitle,
+      answer_title: answerTitle,
+      answer,
+      tag,
+      order: nextOrder,
+      is_active: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+      document_id: docRef.id,
+    });
+
+    batchOps += 1;
+    if (batchOps >= 400) {
+      await commitBatch();
+    }
+
+    nextOrder += 1;
+    successCount += 1;
+    noteFlashcardIncrements.set(
+      noteId,
+      (noteFlashcardIncrements.get(noteId) || 0) + 1
+    );
+  }
+
+  await commitBatch();
+
+  // Best-effort metadata updates (do not fail the whole upload after data was inserted)
+  try {
+    let metaBatch = writeBatch(db);
+    let metaOps = 0;
+    const nowIso = new Date().toISOString();
+
+    const flushMetaBatch = async () => {
+      if (metaOps === 0) return;
+      await metaBatch.commit();
+      metaBatch = writeBatch(db);
+      metaOps = 0;
+    };
+
+    if (successCount > 0) {
+      const topicRef = doc(db, "topics", topicId);
+      metaBatch.update(topicRef, {
+        total_flashcards: increment(successCount),
+        updated_at: nowIso,
+      });
+      metaOps += 1;
+    }
+
+    for (const [noteId, count] of noteFlashcardIncrements.entries()) {
+      const noteRef = doc(db, "notes", noteId);
+      metaBatch.update(noteRef, {
+        total_flashcards: increment(count),
+        updated_at: nowIso,
+      });
+      metaOps += 1;
+
+      if (metaOps >= 400) {
+        await flushMetaBatch();
       }
     }
 
-    // Update the topic's total_flashcards count
-    tx.update(topicRef, {
-      total_flashcards: currentTotalFlashcards + successCount,
-      updated_at: new Date().toISOString(),
-    });
-  });
+    await flushMetaBatch();
+  } catch (metaError) {
+    console.error("Bulk upload completed, but metadata update failed:", metaError);
+  }
 
   const totalCount = dataRows.length;
-  const skippedCount = totalCount - successCount;
+  skippedCount = Math.max(skippedCount, totalCount - successCount);
 
   return {
     totalCount,

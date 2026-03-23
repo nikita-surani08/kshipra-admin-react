@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Modal, Form, Select, Button, Col, Row, Upload } from "antd";
+import { Modal, Form, Select, Button, Col, Row, Upload, Spin } from "antd";
 import { Work_Sans } from "next/font/google";
 import { getTopics, createTopic } from "@/service/api/config.api";
 import { InboxOutlined } from "@ant-design/icons";
@@ -48,6 +48,8 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [options, setOptions] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const buttonLoading = loading || isSubmitting;
 
   const fetchTopics = async () => {
     try {
@@ -92,6 +94,7 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
 
   const handleSubmit = async () => {
     try {
+      setIsSubmitting(true);
       const values = await form.validateFields();
 
       // Handle Topic Creation if needed
@@ -116,13 +119,14 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
       await onSave(payload);
       form.resetFields();
       setFileList([]);
-      onCancel();
     } catch (error: any) {
       // Ignore Ant Design validation errors
       if (error?.errorFields) {
         return;
       }
       console.error("Error submitting upload form:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -153,6 +157,7 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
     >
       <h2 className="text-[#1E4640] font-medium text-2xl">Add Flashcard</h2>
 
+      <Spin spinning={buttonLoading}>
       <Form form={form} layout="vertical" className="mt-4 box-border">
         {/* SUBJECT + TOPIC ROW */}
         <Row gutter={20}>
@@ -227,6 +232,7 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
               </p>
               <Button
                 type="primary"
+                disabled={buttonLoading}
                 style={{
                   backgroundColor: "#0B5447",
                   borderRadius: 8,
@@ -254,6 +260,7 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
         <div className={`flex justify-end gap-4 mt-8 ${worksans.className}`}>
           <Button
             onClick={onCancel}
+            disabled={buttonLoading}
             style={{
               height: 44,
               width: 120,
@@ -268,7 +275,8 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
 
           <Button
             type="primary"
-            loading={loading}
+            loading={buttonLoading}
+            disabled={buttonLoading}
             onClick={handleSubmit}
             style={{
               height: 44,
@@ -282,6 +290,7 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
           </Button>
         </div>
       </Form>
+      </Spin>
     </Modal>
   );
 };
