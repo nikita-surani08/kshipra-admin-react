@@ -145,9 +145,9 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
       title: "Question",
       dataIndex: "question",
       key: "question",
-      width: "16%",
+      width: "13%",
       render: (text: string, record: Flashcard) => (
-        <Text ellipsis style={{ cursor: "pointer", maxWidth: "180px" }}>
+        <Text ellipsis style={{ cursor: "pointer", maxWidth: "150px" }}>
           {text}
         </Text>
       ),
@@ -167,9 +167,9 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
       title: "Answer",
       dataIndex: "answer",
       key: "answer",
-      width: "16%",
+      width: "13%",
       render: (text: string, record: Flashcard) => (
-        <Text ellipsis style={{ cursor: "pointer", maxWidth: "180px" }}>
+        <Text ellipsis style={{ cursor: "pointer", maxWidth: "150px" }}>
           {text}
         </Text>
       ),
@@ -180,7 +180,17 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
       key: "tag",
       width: "12%",
       render: (text: string) => (
-        <Text ellipsis style={{ cursor: "pointer", maxWidth: "120px" }}>
+        <Text
+          ellipsis
+          style={{
+            cursor: "pointer",
+            maxWidth: "120px",
+            display: "block",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+        >
           {text || "-"}
         </Text>
       ),
@@ -188,7 +198,7 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
     {
       title: "Actions",
       key: "actions",
-      width: "8%",
+      width: "9%",
       fixed: "right" as const,
       render: (_: any, record: Flashcard) => (
         <Space size="middle">

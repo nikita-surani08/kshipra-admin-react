@@ -33,6 +33,7 @@
   .notes-table .ant-table-tbody > tr > td {
     padding: 8px 12px !important; /* reduced padding */
     border: none !important;
+    overflow: hidden !important;
   }
 
   /* Center align all header cells */
@@ -55,6 +56,17 @@
 .notes-table .ant-table-pagination {
   margin: 12px 12px 8px !important;
   padding-bottom: 4px !important;
+}
+
+/* Keep fixed right actions column above adjacent cells while horizontal scrolling */
+.notes-table .ant-table-thead > tr > th.ant-table-cell-fix-right,
+.notes-table .ant-table-thead > tr > th.ant-table-cell-fix-right-first,
+.notes-table .ant-table-thead > tr > th.ant-table-cell-fix-right-last,
+.notes-table .ant-table-tbody > tr > td.ant-table-cell-fix-right,
+.notes-table .ant-table-tbody > tr > td.ant-table-cell-fix-right-first,
+.notes-table .ant-table-tbody > tr > td.ant-table-cell-fix-right-last {
+  background: #ffffff !important;
+  z-index: 4 !important;
 }
 
 
