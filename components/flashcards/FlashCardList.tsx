@@ -211,7 +211,7 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
   ];
 
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ width: "100%", height: "100%" }}>
       <Table
         columns={columns}
         dataSource={flashcards}
@@ -223,7 +223,7 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
           width: "100%",
         }}
         scroll={{
-          y: "52vh",
+          y: "46vh",
           x: "max-content",
         }}
         pagination={{

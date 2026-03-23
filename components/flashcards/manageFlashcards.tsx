@@ -282,7 +282,7 @@ const ManageFlashcards = () => {
   const handlePageChange = (page: number, pageSize?: number) => {
     setPagination((prev) => ({
       ...prev,
-      current: page,
+      page,
       ...(pageSize && { pageSize }),
     }));
     fetchFlashcards(page, pageSize);
@@ -565,7 +565,7 @@ const ManageFlashcards = () => {
             </div>
           </div>
         </div>
-        <div className="h-full flex-1 w-full flex bg-white px-4">
+        <div className="h-full flex-1 min-h-0 w-full flex bg-white px-4">
           {selectedSubject === null && (
             <div className="flex flex-col items-center justify-center gap-4 w-full">
               <Image
@@ -587,7 +587,7 @@ const ManageFlashcards = () => {
 
           {selectedSubject !== null &&
             (flashcardList.length > 0 ? (
-              <div className="w-full mt-4">
+              <div className="w-full mt-4 h-full min-h-0 pb-2">
                 <FlashCardList
                   flashcards={flashcardList}
                   onEdit={handleEditClick}

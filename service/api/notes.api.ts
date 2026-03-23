@@ -16,6 +16,14 @@ import {
 } from "firebase/firestore";
 import { db } from "../config/firebase.config";
 
+const normalizeSearchTerm = (value: string = "") => value.trim().toLowerCase();
+
+const matchesSearch = (text: string = "", queryText: string = "") => {
+  const normalizedQuery = normalizeSearchTerm(queryText);
+  if (!normalizedQuery) return true;
+  return String(text || "").toLowerCase().includes(normalizedQuery);
+};
+
 const updateTopicNotesCount = async (topicId: string, increment: number = 1) => {
   if (typeof topicId !== "string" || !topicId.trim() || topicId === "unknown_topic") {
     return;
@@ -268,103 +276,25 @@ export const getNotesBySubjectId = async (
 ) => {
   try {
     const notesRef = collection(db, "notes");
-
-    if (searchQuery && searchQuery.trim() !== "") {
-      const countQuery = query(
-        notesRef,
-        where("subject_id", "==", subjectId),
-        where("is_active", "==", true),
-        where("title", ">=", searchQuery),
-        where("title", "<=", searchQuery + "\uf8ff")
-      );
-      const totalSnap = await getCountFromServer(countQuery);
-      const total = totalSnap.data().count;
-
-      let q;
-
-      if (page === 1 || !lastVisibleDocs[page - 1]) {
-        console.log("this is if");
-        q = query(
-          notesRef,
-          where("subject_id", "==", subjectId),
-          where("title", ">=", searchQuery),
-          where("title", "<=", searchQuery + "\uf8ff"),
-          where("is_active", "==", true),
-          orderBy("order", "asc"),
-          limit(pageSize)
-        );
-        console.log(q, "this is q");
-      } else {
-        console.log("this is else");
-        q = query(
-          notesRef,
-          where("subject_id", "==", subjectId),
-          where("title", ">=", searchQuery),
-          where("title", "<=", searchQuery + "\uf8ff"),
-          where("is_active", "==", true),
-          orderBy("order", "asc"),
-          startAfter(lastVisibleDocs[page - 1]),
-          limit(pageSize)
-        );
-      }
-
-      const querySnapshot = await getDocs(q);
-
-      const notes = querySnapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Note[];
-
-      const lastVisibleDoc =
-        querySnapshot.docs[querySnapshot.docs.length - 1] || null;
-
-      console.log(notes, "this is notes");
-      return {
-        data: notes,
-        lastVisible: lastVisibleDoc,
-        total,
-        page,
-        pageSize,
-      };
-    }
-
-    const countQuery = query(
+    const baseQuery = query(
       notesRef,
       where("subject_id", "==", subjectId),
-      where("is_active", "==", true)
+      where("is_active", "==", true),
+      orderBy("order", "asc")
     );
-    const totalSnap = await getCountFromServer(countQuery);
-    const total = totalSnap.data().count;
+    const querySnapshot = await getDocs(baseQuery);
+    const filteredDocs = querySnapshot.docs.filter((doc) =>
+      matchesSearch((doc.data() as Note).title, searchQuery)
+    );
 
-    let q;
-    if (page === 1 || !lastVisibleDocs[page - 1]) {
-      q = query(
-        notesRef,
-        where("subject_id", "==", subjectId),
-        where("is_active", "==", true),
-        orderBy("order", "asc"),
-        limit(pageSize)
-      );
-    } else {
-      q = query(
-        notesRef,
-        where("subject_id", "==", subjectId),
-        where("is_active", "==", true),
-        orderBy("order", "asc"),
-        startAfter(lastVisibleDocs[page - 1]),
-        limit(pageSize)
-      );
-    }
-
-    const querySnapshot = await getDocs(q);
-
-    const notes = querySnapshot.docs.map((doc: any) => ({
+    const total = filteredDocs.length;
+    const startIndex = Math.max(0, (page - 1) * pageSize);
+    const pageDocs = filteredDocs.slice(startIndex, startIndex + pageSize);
+    const notes = pageDocs.map((doc: any) => ({
       id: doc.id,
       ...doc.data(),
     })) as Note[];
-
-    const lastVisibleDoc =
-      querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+    const lastVisibleDoc = pageDocs[pageDocs.length - 1] || null;
 
     return {
       data: notes,
@@ -389,101 +319,25 @@ export const getNotesByTopicId = async (
 ) => {
   try {
     const notesRef = collection(db, "notes");
-
-    console.log(searchQuery, "this is search query");
-    if (searchQuery && searchQuery.trim() !== "") {
-      const countQuery = query(
-        notesRef,
-        where("topic_id", "==", topicId),
-        where("is_active", "==", true),
-        where("title", ">=", searchQuery),
-        where("title", "<=", searchQuery + "\uf8ff")
-      );
-      const totalSnap = await getCountFromServer(countQuery);
-      const total = totalSnap.data().count;
-
-      let q;
-
-      if (page === 1 || !lastVisibleDocs[page - 1]) {
-        q = query(
-          notesRef,
-          where("topic_id", "==", topicId),
-          where("title", ">=", searchQuery),
-          where("title", "<=", searchQuery + "\uf8ff"),
-          where("is_active", "==", true),
-          orderBy("order", "asc"),
-          limit(pageSize)
-        );
-      } else {
-        q = query(
-          notesRef,
-          where("topic_id", "==", topicId),
-          where("title", ">=", searchQuery),
-          where("title", "<=", searchQuery + "\uf8ff"),
-          where("is_active", "==", true),
-          orderBy("order", "asc"),
-          startAfter(lastVisibleDocs[page - 1]),
-          limit(pageSize)
-        );
-      }
-
-      const querySnapshot = await getDocs(q);
-
-      const notes = querySnapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Note[];
-
-      const lastVisibleDoc =
-        querySnapshot.docs[querySnapshot.docs.length - 1] || null;
-
-      return {
-        data: notes,
-        lastVisible: lastVisibleDoc,
-        total,
-        page,
-        pageSize,
-      };
-    }
-
-    const countQuery = query(
+    const baseQuery = query(
       notesRef,
       where("topic_id", "==", topicId),
-      where("is_active", "==", true)
+      where("is_active", "==", true),
+      orderBy("order", "asc")
+    );
+    const querySnapshot = await getDocs(baseQuery);
+    const filteredDocs = querySnapshot.docs.filter((doc) =>
+      matchesSearch((doc.data() as Note).title, searchQuery)
     );
 
-    const totalSnap = await getCountFromServer(countQuery);
-    const total = totalSnap.data().count;
-
-    let q;
-    if (page === 1 || !lastVisibleDocs[page - 1]) {
-      q = query(
-        notesRef,
-        where("topic_id", "==", topicId),
-        where("is_active", "==", true),
-        orderBy("order", "asc"),
-        limit(pageSize)
-      );
-    } else {
-      q = query(
-        notesRef,
-        where("topic_id", "==", topicId),
-        where("is_active", "==", true),
-        orderBy("order", "asc"),
-        startAfter(lastVisibleDocs[page - 1]),
-        limit(pageSize)
-      );
-    }
-
-    const querySnapshot = await getDocs(q);
-
-    const notes = querySnapshot.docs.map((doc: any) => ({
+    const total = filteredDocs.length;
+    const startIndex = Math.max(0, (page - 1) * pageSize);
+    const pageDocs = filteredDocs.slice(startIndex, startIndex + pageSize);
+    const notes = pageDocs.map((doc: any) => ({
       id: doc.id,
       ...doc.data(),
     })) as Note[];
-
-    const lastVisibleDoc =
-      querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+    const lastVisibleDoc = pageDocs[pageDocs.length - 1] || null;
 
     return {
       data: notes,

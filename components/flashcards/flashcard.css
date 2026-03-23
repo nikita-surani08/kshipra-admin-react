@@ -52,6 +52,11 @@
   padding-right: 10px !important;
 }
 
+.notes-table .ant-table-pagination {
+  margin: 12px 12px 8px !important;
+  padding-bottom: 4px !important;
+}
+
 
 
 

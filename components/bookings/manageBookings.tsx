@@ -26,12 +26,22 @@ const ManageBookings = () => {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const lastVisible = currentPage === 1 ? null : lastVisibleDocs[currentPage - 1];
-        const res: any = await getBookings(currentPage, pageSize, lastVisible);
+        const isSearching = searchQuery.trim().length > 0;
+        const lastVisible = isSearching
+          ? null
+          : currentPage === 1
+            ? null
+            : lastVisibleDocs[currentPage - 1];
+        const res: any = await getBookings(
+          currentPage,
+          pageSize,
+          lastVisible,
+          searchQuery
+        );
         if (mounted && res?.data) {
           setBookingsData(res.data);
           setTotalBookings(res.total);
-          if (res.lastVisible) {
+          if (!isSearching && res.lastVisible) {
             setLastVisibleDocs(prev => ({ ...prev, [currentPage]: res.lastVisible }));
           }
         }
@@ -45,7 +55,12 @@ const ManageBookings = () => {
     return () => {
       mounted = false;
     };
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setLastVisibleDocs({});
+  }, [searchQuery]);
 
   const handlePageChange = (page: number, newPageSize?: number) => {
     if (newPageSize && newPageSize !== pageSize) {
@@ -189,7 +204,6 @@ const ManageBookings = () => {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setCurrentPage(1); // Reset to first page on search
               }}
             />
           </div>

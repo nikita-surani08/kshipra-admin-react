@@ -19,6 +19,38 @@ import { getStorage, ref, uploadBytes } from "firebase/storage";
 import * as XLSX from "xlsx";
 import { addNote } from "./notes.api";
 
+const normalizeSearchTerm = (value: string = "") => value.trim().toLowerCase();
+
+const matchesSearch = (text: string = "", queryText: string = "") => {
+  const normalizedQuery = normalizeSearchTerm(queryText);
+  if (!normalizedQuery) return true;
+  return String(text || "").toLowerCase().includes(normalizedQuery);
+};
+
+const buildNoteTitleMap = async (
+  field: "subject_id" | "topic_id",
+  id: string
+): Promise<Map<string, string>> => {
+  const notesSnap = await getDocs(
+    query(
+      collection(db, "notes"),
+      where(field, "==", id),
+      where("is_active", "==", true)
+    )
+  );
+
+  const noteTitleMap = new Map<string, string>();
+  notesSnap.docs.forEach((noteDoc) => {
+    const noteData = noteDoc.data() as { title?: string; document_id?: string };
+    noteTitleMap.set(noteDoc.id, noteData.title || "");
+    if (noteData.document_id) {
+      noteTitleMap.set(noteData.document_id, noteData.title || "");
+    }
+  });
+
+  return noteTitleMap;
+};
+
 export interface Flashcard {
   id?: string;
   answer: string;
@@ -506,94 +538,30 @@ export const getFlashcardsBySubjectId = async (
 ) => {
   try {
     const flashcardsRef = collection(db, "flashcards");
-
-    if (searchQuery && searchQuery.trim() !== "") {
-      const countQuery = query(
-        flashcardsRef,
-        where("subject_id", "==", subjectId),
-        where("is_active", "==", true),
-        where("question", ">=", searchQuery),
-        where("question", "<=", searchQuery + "\uf8ff")
-      );
-      const totalSnap = await getCountFromServer(countQuery);
-      const total = totalSnap.data().count;
-
-      let q;
-      if (page === 1 || !lastVisibleDocs[page - 1]) {
-        q = query(
-          flashcardsRef,
-          where("subject_id", "==", subjectId),
-          where("is_active", "==", true),
-          where("question", ">=", searchQuery),
-          where("question", "<=", searchQuery + "\uf8ff"),
-          orderBy("created_at", "desc"),
-          limit(pageSize)
-        );
-      } else {
-        q = query(
-          flashcardsRef,
-          where("subject_id", "==", subjectId),
-          where("is_active", "==", true),
-          where("question", ">=", searchQuery),
-          where("question", "<=", searchQuery + "\uf8ff"),
-          orderBy("created_at", "desc"),
-          startAfter(lastVisibleDocs[page - 1]),
-          limit(pageSize)
-        );
-      }
-
-      const querySnapshot = await getDocs(q);
-      const flashcards = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Flashcard[];
-
-      const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-
-      return {
-        data: flashcards,
-        lastVisible: newLastVisible,
-        total,
-        page,
-        pageSize,
-      };
-    }
-    // Get total matching documents
-    const countQuery = query(
+    const normalizedQuery = normalizeSearchTerm(searchQuery);
+    const baseQuery = query(
       flashcardsRef,
       where("subject_id", "==", subjectId),
-      where("is_active", "==", true)
+      where("is_active", "==", true),
+      orderBy("created_at", "desc")
     );
-    const totalSnap = await getCountFromServer(countQuery);
-    const total = totalSnap.data().count;
-
-    let q;
-    if (page === 1 || !lastVisibleDocs[page - 1]) {
-      q = query(
-        flashcardsRef,
-        where("subject_id", "==", subjectId),
-        where("is_active", "==", true),
-        orderBy("created_at", "desc"),
-        limit(pageSize)
-      );
-    } else {
-      q = query(
-        flashcardsRef,
-        where("subject_id", "==", subjectId),
-        where("is_active", "==", true),
-        orderBy("created_at", "desc"),
-        startAfter(lastVisibleDocs[page - 1]),
-        limit(pageSize)
-      );
-    }
-
-    const querySnapshot = await getDocs(q);
-    const flashcards = querySnapshot.docs.map((doc) => ({
+    const querySnapshot = await getDocs(baseQuery);
+    const noteTitleMap =
+      normalizedQuery.length > 0
+        ? await buildNoteTitleMap("subject_id", subjectId)
+        : new Map<string, string>();
+    const filteredDocs = querySnapshot.docs.filter((doc) =>
+      matchesSearch((doc.data() as Flashcard).question, searchQuery) ||
+      matchesSearch(noteTitleMap.get((doc.data() as Flashcard).note_id) || "", searchQuery)
+    );
+    const total = filteredDocs.length;
+    const startIndex = Math.max(0, (page - 1) * pageSize);
+    const pageDocs = filteredDocs.slice(startIndex, startIndex + pageSize);
+    const flashcards = pageDocs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as Flashcard[];
-
-    const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+    const newLastVisible = pageDocs[pageDocs.length - 1] || null;
 
     return {
       data: flashcards,
@@ -639,96 +607,30 @@ export const getFlashcardsByTopicId = async (
 ) => {
   try {
     const flashcardsRef = collection(db, "flashcards");
-
-    if (searchQuery && searchQuery.trim() !== "") {
-      const countQuery = query(
-        flashcardsRef,
-        where("topic_id", "==", topicId),
-        where("is_active", "==", true),
-        where("question", ">=", searchQuery),
-        where("question", "<=", searchQuery + "\uf8ff")
-      );
-      const totalSnap = await getCountFromServer(countQuery);
-      const total = totalSnap.data().count;
-
-      let q;
-      if (page === 1 || !lastVisibleDocs[page - 1]) {
-        q = query(
-          flashcardsRef,
-          where("topic_id", "==", topicId),
-          where("is_active", "==", true),
-          where("question", ">=", searchQuery),
-          where("question", "<=", searchQuery + "\uf8ff"),
-          orderBy("created_at", "desc"),
-          limit(pageSize)
-        );
-      } else {
-        q = query(
-          flashcardsRef,
-          where("topic_id", "==", topicId),
-          where("is_active", "==", true),
-          where("question", ">=", searchQuery),
-          where("question", "<=", searchQuery + "\uf8ff"),
-          orderBy("created_at", "desc"),
-          startAfter(lastVisibleDocs[page - 1]),
-          limit(pageSize)
-        );
-      }
-
-      const querySnapshot = await getDocs(q);
-      const flashcards = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Flashcard[];
-
-      const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-
-      return {
-        data: flashcards,
-        lastVisible: newLastVisible,
-        total,
-        page,
-        pageSize,
-      };
-    }
-
-    // Get total matching documents
-    const countQuery = query(
+    const normalizedQuery = normalizeSearchTerm(searchQuery);
+    const baseQuery = query(
       flashcardsRef,
       where("topic_id", "==", topicId),
-      where("is_active", "==", true)
+      where("is_active", "==", true),
+      orderBy("created_at", "desc")
     );
-    const totalSnap = await getCountFromServer(countQuery);
-    const total = totalSnap.data().count;
-
-    let q;
-    if (page === 1 || !lastVisibleDocs[page - 1]) {
-      q = query(
-        flashcardsRef,
-        where("topic_id", "==", topicId),
-        where("is_active", "==", true),
-        orderBy("created_at", "desc"),
-        limit(pageSize)
-      );
-    } else {
-      q = query(
-        flashcardsRef,
-        where("topic_id", "==", topicId),
-        where("is_active", "==", true),
-        orderBy("created_at", "desc"),
-        startAfter(lastVisibleDocs[page - 1]),
-        limit(pageSize)
-      );
-    }
-
-    const querySnapshot = await getDocs(q);
-    const flashcards = querySnapshot.docs.map((doc) => ({
+    const querySnapshot = await getDocs(baseQuery);
+    const noteTitleMap =
+      normalizedQuery.length > 0
+        ? await buildNoteTitleMap("topic_id", topicId)
+        : new Map<string, string>();
+    const filteredDocs = querySnapshot.docs.filter((doc) =>
+      matchesSearch((doc.data() as Flashcard).question, searchQuery) ||
+      matchesSearch(noteTitleMap.get((doc.data() as Flashcard).note_id) || "", searchQuery)
+    );
+    const total = filteredDocs.length;
+    const startIndex = Math.max(0, (page - 1) * pageSize);
+    const pageDocs = filteredDocs.slice(startIndex, startIndex + pageSize);
+    const flashcards = pageDocs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as Flashcard[];
-
-    const newLastVisible =
-      querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+    const newLastVisible = pageDocs[pageDocs.length - 1] || null;
 
     return {
       data: flashcards,

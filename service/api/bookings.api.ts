@@ -1,5 +1,39 @@
-import { collection, getDocs, doc, getDoc, query, orderBy, limit, startAfter, getCountFromServer } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+  getCountFromServer,
+} from "firebase/firestore";
 import { db } from "../config/firebase.config";
+
+const normalizeSearchTerm = (value: string = "") => value.trim().toLowerCase();
+
+const bookingMatchesSearch = (booking: any, searchQuery: string = "") => {
+  const queryText = normalizeSearchTerm(searchQuery);
+  if (!queryText) return true;
+
+  const candidates = [
+    booking?.studentName,
+    booking?.studentEmail,
+    booking?.mentorName,
+    booking?.bookingDate,
+    booking?.timeSlot,
+    booking?.duration,
+    booking?.amount,
+    booking?.createdDate,
+    booking?.bookingStatus,
+    booking?.paymentStatus,
+  ];
+
+  return candidates.some((value) =>
+    String(value ?? "").toLowerCase().includes(queryText)
+  );
+};
 
 const formatAmount = (amount: number | undefined, currency = "INR") => {
   const value = amount ? amount / 100 : 0; // assume amount is in paise
@@ -137,7 +171,9 @@ const formatTimeTo12Hour = (val: any) => {
       return formatHoursMinutes(isoDate.getHours(), isoDate.getMinutes());
     }
 
-    const timeMatch = val.match(/^\s*(\d{1,2}):(\d{2})(?:\s*([AaPp][Mm]))?\s*$/);
+    const timeMatch = val.match(
+      /^\s*(\d{1,2}):(\d{2})(?:\s*([AaPp][Mm]))?\s*$/,
+    );
     if (timeMatch) {
       let hours = parseInt(timeMatch[1], 10);
       const minutes = parseInt(timeMatch[2], 10);
@@ -170,30 +206,30 @@ const formatTimeTo12Hour = (val: any) => {
 export const getBookings = async (
   page: number = 1,
   pageSize: number = 10,
-  lastVisible: any = null
+  lastVisible: any = null,
+  searchQuery: string = "",
 ) => {
   try {
     const ordersRef = collection(db, "userOrders");
-    
+    const isSearching = normalizeSearchTerm(searchQuery).length > 0;
+
     // Get total count for pagination
     const countQuery = query(ordersRef);
     const totalSnap = await getCountFromServer(countQuery);
     const total = totalSnap.data().count;
 
-    // Build paginated query
+    // Build query
     let q;
-    if (page === 1 || !lastVisible) {
-      q = query(
-        ordersRef,
-        orderBy("createdAt", "desc"),
-        limit(pageSize)
-      );
+    if (isSearching) {
+      q = query(ordersRef, orderBy("createdAt", "desc"));
+    } else if (page === 1 || !lastVisible) {
+      q = query(ordersRef, orderBy("createdAt", "desc"), limit(pageSize));
     } else {
       q = query(
         ordersRef,
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
-        limit(pageSize)
+        limit(pageSize),
       );
     }
 
@@ -203,7 +239,13 @@ export const getBookings = async (
 
     for (const docSnap of snap.docs) {
       const data: any = docSnap.data();
-      const orderNotes = data?.paymentDetails?.order?.notes || data?.paymentDetails?.notes || {};
+      const orderStatus = (data.status || "").toString().toLowerCase();
+      if (orderStatus === "created") {
+        continue;
+      }
+
+      const orderNotes =
+        data?.paymentDetails?.order?.notes || data?.paymentDetails?.notes || {};
 
       // fetch mentor name
       let mentorName = data.mentorId || "-";
@@ -238,51 +280,42 @@ export const getBookings = async (
       const amount = data.amount ?? data.paymentDetails?.amount ?? 0;
       const currency = data.currency ?? data.paymentDetails?.currency ?? "INR";
 
-      const mentorStatusRaw = (data.mentorStatus || "").toString().toLowerCase();
-      let bookingStatus = "Accepted";
-      if (mentorStatusRaw === "rejected") bookingStatus = "Rejected";
-      else if (mentorStatusRaw === "pending") bookingStatus = "Pending";
+      const mentorStatusRaw = (data.mentorStatus || "")
+        .toString()
+        .toLowerCase();
+      let bookingStatus = "Pending";
+      if (mentorStatusRaw === "accepted") bookingStatus = "Accepted";
+      else if (mentorStatusRaw === "rejected") bookingStatus = "Rejected";
 
-      const paymentStatusRaw = (data.status || data.paymentDetails?.status || "").toString().toLowerCase();
-      const refundStatusRaw = (data.refundStatus || "").toString().toLowerCase();
-
-      let paymentStatus = "Pending";
-      if (bookingStatus === "Rejected" && refundStatusRaw) {
-        if (refundStatusRaw === "processed" || refundStatusRaw === "completed" || refundStatusRaw === "refunded") {
-          paymentStatus = "Refunded";
-        } else if (refundStatusRaw === "pending" || refundStatusRaw === "initiated") {
-          paymentStatus = "Refund Pending";
-        } else if (refundStatusRaw === "failed") {
-          paymentStatus = "Refund Failed";
-        } else {
-          paymentStatus = refundStatusRaw
-            .split(/[_\s]+/)
-            .filter(Boolean)
-            .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(" ");
-        }
-      } else if (paymentStatusRaw === "paid" || paymentStatusRaw === "captured") {
-        paymentStatus = "Paid";
-      } else if (paymentStatusRaw === "refunded" || refundStatusRaw === "refunded") {
-        paymentStatus = "Refunded";
-      }
+      const paymentStatusRaw = (data.status || "").toString().trim();
+      const refundStatusRaw = (data.refundStatus || "")
+        .toString()
+        .toLowerCase();
+      const paymentStatus =
+        bookingStatus === "Rejected" ? refundStatusRaw : paymentStatusRaw;
 
       // Normalize start/end time and session date from various possible shapes
-      const startTime = normalizeStringField(data, [
-        "startTime",
-        "start_time",
-        "start",
-        "slotStart",
-        "slot_start",
-      ]) || normalizeStringField(orderNotes, ["startTime", "start_time"]) || normalizeStringField(data?.paymentDetails, ["startTime", "start_time"]);
+      const startTime =
+        normalizeStringField(data, [
+          "startTime",
+          "start_time",
+          "start",
+          "slotStart",
+          "slot_start",
+        ]) ||
+        normalizeStringField(orderNotes, ["startTime", "start_time"]) ||
+        normalizeStringField(data?.paymentDetails, ["startTime", "start_time"]);
 
-      const endTime = normalizeStringField(data, [
-        "endTime",
-        "end_time",
-        "end",
-        "slotEnd",
-        "slot_end",
-      ]) || normalizeStringField(orderNotes, ["endTime", "end_time"]) || normalizeStringField(data?.paymentDetails, ["endTime", "end_time"]);
+      const endTime =
+        normalizeStringField(data, [
+          "endTime",
+          "end_time",
+          "end",
+          "slotEnd",
+          "slot_end",
+        ]) ||
+        normalizeStringField(orderNotes, ["endTime", "end_time"]) ||
+        normalizeStringField(data?.paymentDetails, ["endTime", "end_time"]);
 
       const sessionDateRaw =
         orderNotes?.sessionDate ??
@@ -298,15 +331,24 @@ export const getBookings = async (
       const formattedStartTime = formatTimeTo12Hour(startTime);
       const formattedEndTime = formatTimeTo12Hour(endTime);
 
-      const timeSlot = formattedStartTime && formattedEndTime
-        ? `${formattedStartTime} - ${formattedEndTime}`
-        : formattedStartTime || formattedEndTime || "-";
+      const timeSlot =
+        formattedStartTime && formattedEndTime
+          ? `${formattedStartTime} - ${formattedEndTime}`
+          : formattedStartTime || formattedEndTime || "-";
 
       const durationVal = computeDuration(startTime, endTime);
       // debug log to help trace parsing issues
       try {
         // eslint-disable-next-line no-console
-        console.debug("booking-debug", { id: docSnap.id, startTime, endTime, sessionDate, createdDate, durationVal, raw: { ...(data || {}) } });
+        console.debug("booking-debug", {
+          id: docSnap.id,
+          startTime,
+          endTime,
+          sessionDate,
+          createdDate,
+          durationVal,
+          raw: { ...(data || {}) },
+        });
       } catch (e) {
         // ignore
       }
@@ -327,10 +369,28 @@ export const getBookings = async (
       });
     }
 
+    if (isSearching) {
+      const filtered = results.filter((booking) =>
+        bookingMatchesSearch(booking, searchQuery)
+      );
+      const startIndex = Math.max(0, (page - 1) * pageSize);
+      const paged = filtered.slice(startIndex, startIndex + pageSize);
+      return {
+        data: paged,
+        lastVisible: null,
+        total: filtered.length,
+        page,
+        pageSize,
+      };
+    }
+
     return {
       data: results,
       lastVisible: lastVisibleDoc,
-      total,
+      total: Math.max(
+        total - (snap.docs.length - results.length),
+        results.length,
+      ),
       page,
       pageSize,
     };

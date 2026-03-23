@@ -16,6 +16,25 @@ import {
 import { db } from "../config/firebase.config";
 import { Session } from "inspector/promises";
 
+const normalizeSearchTerm = (value: string = "") => value.trim().toLowerCase();
+
+const mentorMatchesSearch = (mentor: any, searchQuery: string = "") => {
+  const queryText = normalizeSearchTerm(searchQuery);
+  if (!queryText) return true;
+
+  const candidates = [
+    mentor?.name,
+    mentor?.emailId,
+    mentor?.speciality,
+    ...(Array.isArray(mentor?.expertise) ? mentor.expertise : []),
+    ...(Array.isArray(mentor?.rank) ? mentor.rank : []),
+  ];
+
+  return candidates.some((value) =>
+    String(value ?? "").toLowerCase().includes(queryText)
+  );
+};
+
 export interface SessionCard {
   duration: string;
   fees: number;
@@ -122,23 +141,11 @@ export const addMentor = async (mentorData: any) => {
 export const getMentors = async (searchQuery: string = "") => {
   try {
     const mentorsRef = collection(db, "mentors");
-    let q;
-
-    if (searchQuery && searchQuery.trim() !== "") {
-      q = query(
-        mentorsRef,
-        where("isActive", "==", true),
-        where("name", ">=", searchQuery),
-        where("name", "<=", searchQuery + "\uf8ff"),
-        orderBy("name") // Firestore requires the field in range filter to be the first orderBy
-      );
-    } else {
-      q = query(
-        mentorsRef,
-        where("isActive", "==", true),
-        orderBy("order", "asc") // Order by order field instead of createdAt
-      );
-    }
+    const q = query(
+      mentorsRef,
+      where("isActive", "==", true),
+      orderBy("order", "asc")
+    );
 
     const querySnapshot = await getDocs(q);
     const mentors = querySnapshot.docs.map((doc) => ({
@@ -147,7 +154,7 @@ export const getMentors = async (searchQuery: string = "") => {
     })) as Mentor[];
 
     return {
-      data: mentors,
+      data: mentors.filter((mentor) => mentorMatchesSearch(mentor, searchQuery)),
     };
   } catch (error) {
     console.error("Error fetching mentors:", error);

@@ -79,7 +79,7 @@ const ManageNotes = () => {
               selectedTopic,
               page,
               pageSize,
-              lastVisibleDocs,
+              {},
               value
             );
           } else {
@@ -87,7 +87,7 @@ const ManageNotes = () => {
               selectedSubject,
               page,
               pageSize,
-              lastVisibleDocs,
+              {},
               value
             );
           }
@@ -109,7 +109,7 @@ const ManageNotes = () => {
           setLoading(false);
         }
       }, 500),
-    [selectedSubject, selectedTopic, lastVisibleDocs, pagination.pageSize]
+    [selectedSubject, selectedTopic]
   );
 
   useEffect(() => {
@@ -480,7 +480,6 @@ const ManageNotes = () => {
                 setSearchQuery(e.target.value);
                 debouncedSearch(e.target.value);
               }}
-              disabled={loading}
             />
           </div>
         </div>
