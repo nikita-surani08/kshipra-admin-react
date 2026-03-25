@@ -199,8 +199,7 @@ const manageMentor = () => {
       setErrorMessage(null);
       setIsSuccessAlertOpen(true);
       setIsErrorAlertOpen(false);
-      setView("list");
-      setSelectedMentor(null);
+      closeFormView();
     } catch (error) {
       console.error("Error saving mentor:", error);
       const message =
@@ -302,10 +301,10 @@ const manageMentor = () => {
 
   return (
     <div
-      className={`flex flex-col px-6 py-4 bg-[#F5F6F7] h-full ${worksans.className}`}
+      className={`flex h-full min-h-0 flex-col bg-[#F5F6F7] px-4 py-4 sm:px-6 ${worksans.className}`}
     >
-      <div className="h-[12%] w-full items-center justify-center flex ">
-        <div className="flex justify-between w-full items-center">
+      <div className="flex w-full flex-shrink-0 items-center justify-center pb-4">
+        <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             {view === "add" && (
               <button
@@ -318,12 +317,12 @@ const manageMentor = () => {
               </button>
             )}
             <div
-              className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
+              className={`text-2xl font-semibold text-[#1E4640] ${worksans.className}`}
             >
               Mentor (Study Partners) Management
             </div>
           </div>
-          <div className="relative rounded-xl shadow-[0px_0px_4px_0px_#1E464040]">
+          <div className="relative w-full rounded-xl shadow-[0px_0px_4px_0px_#1E464040] lg:w-auto">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Image
                 src="/images/search.svg"
@@ -334,7 +333,7 @@ const manageMentor = () => {
             </div>
             <input
               type="text"
-              className="pl-12 p-3 rounded-xl w-[350px] text-black"
+              className="w-full rounded-xl p-3 pl-12 text-black sm:w-[350px]"
               placeholder="Search for mentor"
               value={searchQuery}
               onChange={(e) => {
@@ -346,18 +345,18 @@ const manageMentor = () => {
         </div>
       </div>
       <div
-        className={`h-[88%] w-full flex flex-col bg-white rounded-3xl overflow-hidden ${worksans.className}`}
+        className={`flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-3xl bg-white ${worksans.className}`}
       >
         {view === "list" && (
-          <div className="h-[14%] w-full flex-shrink-0 px-5 py-4">
-            <div className="h-full w-full flex justify-between items-center">
+          <div className="w-full flex-shrink-0 px-4 py-4 sm:px-5">
+            <div className="flex h-full w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div
-                className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
+                className={`text-2xl font-semibold text-[#1E4640] ${worksans.className}`}
               >
                 Total Mentor({mentorList.length})
               </div>
 
-              <div className="relative h-[50px] flex gap-4">
+              <div className="relative flex flex-wrap gap-3 lg:h-[50px] lg:flex-nowrap">
                 <div className="shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-white transition-all duration-300 hover:-translate-y-0.2">
                   <Image
                     src="/images/plus.svg"
@@ -384,7 +383,7 @@ const manageMentor = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <div className="shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-[#1E4640] transition-all duration-300 hover:-translate-y-0.2">
                       <SaveOutlined className="text-white" />
                       <button
@@ -412,11 +411,11 @@ const manageMentor = () => {
 
         {view === "list" ? (
           <DndProvider backend={HTML5Backend}>
-            <div className="h-full flex-1 w-full flex bg-white px-4 pb-4">
-              <div className="w-full max-h-[500px] overflow-y-auto p-2 no-scrollbar">
-                <div className="grid grid-cols-4 gap-4 w-full">
+            <div className="flex min-h-0 flex-1 w-full bg-white px-3 pb-4 sm:px-4">
+              <div className="no-scrollbar w-full overflow-y-auto p-2">
+                <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {mentorList.length === 0 ? (
-                    <div className="col-span-4 flex flex-col items-center justify-center h-full">
+                    <div className="col-span-full flex h-full min-h-[300px] flex-col items-center justify-center">
                       <Image
                         src="/images/no_content.svg"
                         width={120}

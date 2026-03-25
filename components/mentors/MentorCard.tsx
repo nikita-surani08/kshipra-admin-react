@@ -48,11 +48,11 @@ const MentorCard: React.FC<MentorCardProps> = ({
   return (
     <Card
       hoverable
-      className="overflow-hidden rounded-2xl shadow-[1px_1px_4px_1px_rgba(0,0,0,0.15)] border-none h-[237px]"
+      className="h-full overflow-hidden rounded-2xl border-none shadow-[1px_1px_4px_1px_rgba(0,0,0,0.15)]"
       styles={{ body: { padding: 0 } }}
       onClick={onClick}
     >
-      <div className="relative w-full h-[190px] rounded-b-2xl overflow-hidden bg-gray-100">
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-b-2xl bg-gray-100">
         <Image
           src={imageUrl}
           alt={name}
@@ -77,7 +77,7 @@ const MentorCard: React.FC<MentorCardProps> = ({
           />
         </Dropdown>
       </div>
-      <div className="px-4 pb-3 flex justify-between items-center bg-white h-[60px]">
+      <div className="flex min-h-[60px] items-center justify-between bg-white px-4 py-3">
         <Text
           strong
           className="text-[#1E4640] text-[16px] leading-[20px]"

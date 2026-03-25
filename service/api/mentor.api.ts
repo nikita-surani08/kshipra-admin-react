@@ -18,6 +18,24 @@ import { Session } from "inspector/promises";
 
 const normalizeSearchTerm = (value: string = "") => value.trim().toLowerCase();
 
+const mentorIsActive = (mentor: any) => {
+  if (typeof mentor?.isActive === "boolean") {
+    return mentor.isActive;
+  }
+
+  if (typeof mentor?.is_active === "boolean") {
+    return mentor.is_active;
+  }
+
+  // Treat legacy records with no active flag as active so they still appear.
+  return true;
+};
+
+const getMentorOrderValue = (mentor: any) => {
+  const numericOrder = Number(mentor?.order);
+  return Number.isFinite(numericOrder) ? numericOrder : Number.MAX_SAFE_INTEGER;
+};
+
 const mentorMatchesSearch = (mentor: any, searchQuery: string = "") => {
   const queryText = normalizeSearchTerm(searchQuery);
   if (!queryText) return true;
@@ -134,24 +152,32 @@ export const addMentor = async (mentorData: any) => {
     };
   } catch (error) {
     console.error("Error adding mentor:", error);
-    throw new Error("Failed to add mentor");
+    throw error instanceof Error ? error : new Error("Failed to add mentor");
   }
 };
 
 export const getMentors = async (searchQuery: string = "") => {
   try {
     const mentorsRef = collection(db, "mentors");
-    const q = query(
-      mentorsRef,
-      where("isActive", "==", true),
-      orderBy("order", "asc")
-    );
-
-    const querySnapshot = await getDocs(q);
-    const mentors = querySnapshot.docs.map((doc) => ({
+    const querySnapshot = await getDocs(mentorsRef);
+    const mentors = querySnapshot.docs
+      .map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    })) as Mentor[];
+      }))
+      .filter((mentor) => mentorIsActive(mentor))
+      .sort((mentorA, mentorB) => {
+        const orderDifference =
+          getMentorOrderValue(mentorA) - getMentorOrderValue(mentorB);
+
+        if (orderDifference !== 0) {
+          return orderDifference;
+        }
+
+        const createdAtA = String(mentorA?.createdAt ?? "");
+        const createdAtB = String(mentorB?.createdAt ?? "");
+        return createdAtB.localeCompare(createdAtA);
+      }) as Mentor[];
 
     return {
       data: mentors.filter((mentor) => mentorMatchesSearch(mentor, searchQuery)),
