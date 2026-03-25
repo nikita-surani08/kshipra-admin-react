@@ -4,7 +4,8 @@ import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
-import { DragOutlined } from "@ant-design/icons";
+import { DragOutlined, LeftOutlined } from "@ant-design/icons";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AddLiveSessionModal from "./AddLiveSessionModal";
 import RemoveLiveSessionModal from "./RemoveLiveSessionModal";
 import LiveSessionCard from "./LiveSessionCard";
@@ -15,6 +16,9 @@ import { LiveSession } from "../../service/api/liveSession.api";
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
 const ManageLiveSession = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<"list" | "add">("list");
   const [selectedSession, setSelectedSession] = useState<any>(null);
@@ -40,6 +44,38 @@ const ManageLiveSession = () => {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const currentView = searchParams.get("view");
+    const sessionId = searchParams.get("sessionId");
+
+    if (!currentView) {
+      setView("list");
+      setSelectedSession(null);
+      return;
+    }
+
+    if (currentView === "add") {
+      setView("add");
+      setSelectedSession(null);
+      return;
+    }
+
+    if (currentView === "edit") {
+      setView("add");
+
+      if (!sessionId) {
+        setSelectedSession(null);
+        return;
+      }
+
+      const matchedSession = sessionList.find((session) => session.id === sessionId);
+
+      if (matchedSession) {
+        setSelectedSession(matchedSession);
+      }
+    }
+  }, [searchParams, sessionList]);
 
   useEffect(() => {
     let filtered = sessionList;
@@ -155,8 +191,7 @@ const ManageLiveSession = () => {
 
       console.log("Session operation successful:", result);
       
-      setView("list");
-      setSelectedSession(null);
+      router.replace(pathname);
     } catch (error) {
       console.error("Failed to save session:", error);
     }
@@ -204,23 +239,16 @@ const ManageLiveSession = () => {
     setSessionToRemove(null);
   };
 
-  const initialValues = selectedSession ? {
-    sessionTitle: selectedSession.name,
-    sessionDescription: selectedSession.description,
-    sessionLink: selectedSession.meeting_link,
-    sessionType: selectedSession.is_free ? 'free' : 'premium',
-    mentor: selectedSession.mentor_name || "", // Changed from mentor_id to mentor_name
-    dateTime: selectedSession.date && selectedSession.time ? dayjs(`${selectedSession.date} ${selectedSession.time}`, 'YYYY-MM-DD HH:mm') : undefined,
-    banner: selectedSession.banner_url || ""
-  } : undefined;
+  const openAddView = () => {
+    router.push(`${pathname}?view=add`);
+  };
 
-  const handleEditClick = () => {
-    const dummySession = {
-      name: "Sample Session",
-      shortBio: "Sample session description",
-    };
-    setSelectedSession(dummySession);
-    setView("add");
+  const openEditView = (sessionId: string) => {
+    router.push(`${pathname}?view=edit&sessionId=${sessionId}`);
+  };
+
+  const closeFormView = () => {
+    router.replace(pathname);
   };
 
   return (
@@ -229,10 +257,22 @@ const ManageLiveSession = () => {
     >
       <div className="h-[12%] w-full items-center justify-center flex ">
         <div className="flex justify-between w-full items-center">
-          <div
-            className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
-          >
-            {view === "add" ? (selectedSession ? "Edit Session" : "Create a new live session") : "Live Session Management"}
+          <div className="flex items-center gap-3">
+            {view === "add" && (
+              <button
+                type="button"
+                onClick={closeFormView}
+                className="flex items-center gap-2 rounded-xl border border-[#1E4640] px-4 py-2 text-[#1E4640] transition-colors hover:bg-[#F5F6F7]"
+              >
+                <LeftOutlined />
+                <span className="font-medium">Back</span>
+              </button>
+            )}
+            <div
+              className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
+            >
+              {view === "add" ? (selectedSession ? "Edit Session" : "Create a new live session") : "Live Session Management"}
+            </div>
           </div>
           <div className="relative rounded-xl shadow-[0px_0px_4px_0px_#1E464040]">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -277,10 +317,7 @@ const ManageLiveSession = () => {
                   />
                   <button
                     className="text-[#1E4640] font-medium"
-                    onClick={() => {
-                      setSelectedSession(null);
-                      setView("add");
-                    }}
+                    onClick={openAddView}
                   >
                     Add Session
                   </button>
@@ -338,9 +375,7 @@ const ManageLiveSession = () => {
                       onMenuClick={() => console.log("Menu clicked")}
                       onEdit={() => {
                         console.log("🟢 EDIT BUTTON CLICKED");
-                        const rawSession = sessionList.find(s => s.id === session.id);
-                        setSelectedSession(rawSession);
-                        setView("add");
+                        openEditView(session.id);
                       }}
                       onDelete={() => handleRemoveClick(session)}
                       onClick={() => {
@@ -358,10 +393,7 @@ const ManageLiveSession = () => {
         ) : (
           <AddLiveSessionModal
             initialValues={selectedSession}
-            onCancel={() => {
-              setView("list");
-              setSelectedSession(null);
-            }}
+            onCancel={closeFormView}
             onSave={handleAddSession}
           />
         )}

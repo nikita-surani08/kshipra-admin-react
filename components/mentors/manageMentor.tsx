@@ -3,8 +3,9 @@
 import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { Dropdown, Space, Button, Pagination, message } from "antd";
-import { DownOutlined, PlusOutlined, DragOutlined, SaveOutlined } from "@ant-design/icons";
+import { DownOutlined, PlusOutlined, DragOutlined, SaveOutlined, LeftOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DndProvider, useDrag, useDrop } from "react-dnd/dist/index.js";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { debounce } from "lodash";
@@ -23,6 +24,9 @@ import { handleImageUpload } from "@/service/api/config.api";
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
 const manageMentor = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<"list" | "add">("list");
   const [loading, setLoading] = useState(false);
@@ -74,24 +78,14 @@ const manageMentor = () => {
           imageUrl={mentor.image || "/images/dummy-mentor.png"}
           onMenuClick={() => console.log("Menu clicked")}
           onEdit={() => {
-            const formValues = {
-              ...mentor,
-              sessionCards: mentor.sessionCard || [],
-            };
-            setSelectedMentor(formValues);
-            setView("add");
+            openEditView(mentor.id);
           }}
           onDelete={() => {
             setSelectedMentor(mentor);
             handleDeleteClick();
           }}
           onClick={() => {
-            const formValues = {
-              ...mentor,
-              sessionCards: mentor.sessionCard || [],
-            };
-            setSelectedMentor(formValues);
-            setView("add");
+            openEditView(mentor.id);
           }}
         />
       </div>
@@ -132,6 +126,41 @@ const manageMentor = () => {
   useEffect(() => {
     fetchMentors();
   }, []);
+
+  useEffect(() => {
+    const currentView = searchParams.get("view");
+    const mentorId = searchParams.get("mentorId");
+
+    if (!currentView) {
+      setView("list");
+      setSelectedMentor(null);
+      return;
+    }
+
+    if (currentView === "add") {
+      setView("add");
+      setSelectedMentor(null);
+      return;
+    }
+
+    if (currentView === "edit") {
+      setView("add");
+
+      if (!mentorId) {
+        setSelectedMentor(null);
+        return;
+      }
+
+      const matchedMentor = mentorList.find((mentor) => mentor.id === mentorId);
+
+      if (matchedMentor) {
+        setSelectedMentor({
+          ...matchedMentor,
+          sessionCards: matchedMentor.sessionCard || [],
+        });
+      }
+    }
+  }, [searchParams, mentorList]);
 
   const handleAddMentor = async (values: any) => {
     try {
@@ -187,21 +216,16 @@ const manageMentor = () => {
     fetchMentors();
   };
 
-  const handleEditClick = () => {
-    // Dummy data for testing - in real app, pass the mentor object or fetch ID
-    const dummyMentor = {
-      name: "Dr. Ananya Sharma",
-      rank: ["Senior Mentor", "Lead Counselor"],
-      shortBio: "Experienced mentor with 10+ years in counseling.",
-      speciality: "Career Guidance",
-      expertise: ["Psychology", "Career Development", "Student Counseling"],
-      emailId: "ananya@example.com",
-      image: "/images/dummy-mentor.png",
-      sessionCards: [{ duration: 30, fees: "500" }],
-      // schedule: [] // Add if there's dummy schedule data
-    };
-    setSelectedMentor(dummyMentor);
-    setView("add");
+  const openAddView = () => {
+    router.push(`${pathname}?view=add`);
+  };
+
+  const openEditView = (mentorId: string) => {
+    router.push(`${pathname}?view=edit&mentorId=${mentorId}`);
+  };
+
+  const closeFormView = () => {
+    router.replace(pathname);
   };
 
   const handleDeleteClick = () => {
@@ -282,10 +306,22 @@ const manageMentor = () => {
     >
       <div className="h-[12%] w-full items-center justify-center flex ">
         <div className="flex justify-between w-full items-center">
-          <div
-            className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
-          >
-            Mentor (Study Partners) Management
+          <div className="flex items-center gap-3">
+            {view === "add" && (
+              <button
+                type="button"
+                onClick={closeFormView}
+                className="flex items-center gap-2 rounded-xl border border-[#1E4640] px-4 py-2 text-[#1E4640] transition-colors hover:bg-[#F5F6F7]"
+              >
+                <LeftOutlined />
+                <span className="font-medium">Back</span>
+              </button>
+            )}
+            <div
+              className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
+            >
+              Mentor (Study Partners) Management
+            </div>
           </div>
           <div className="relative rounded-xl shadow-[0px_0px_4px_0px_#1E464040]">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -331,10 +367,7 @@ const manageMentor = () => {
                   />
                   <button
                     className="text-[#1E4640] font-medium"
-                    onClick={() => {
-                      setSelectedMentor(null);
-                      setView("add");
-                    }}
+                    onClick={openAddView}
                   >
                     Add Mentor
                   </button>
@@ -418,10 +451,7 @@ const manageMentor = () => {
         ) : (
           <AddMentor
             initialValues={selectedMentor}
-            onCancel={() => {
-              setView("list");
-              setSelectedMentor(null);
-            }}
+            onCancel={closeFormView}
             onSave={handleAddMentor}
             loading={loading}
           />

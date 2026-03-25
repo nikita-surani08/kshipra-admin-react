@@ -4,7 +4,8 @@ import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
-import { DragOutlined } from "@ant-design/icons";
+import { DragOutlined, LeftOutlined } from "@ant-design/icons";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import PastSessionCard from "./PastSessionCard";
 import AddPastSessionModal from "./AddPastSessionModal";
 import RemovePastSessionModal from "./RemovePastSessionModal";
@@ -15,6 +16,9 @@ import { PastSession } from "../../service/api/pastSession.api";
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
 const managePastSession = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<"list" | "add">("list");
   const [selectedSession, setSelectedSession] = useState<PastSession | null>(null);
@@ -40,6 +44,35 @@ const managePastSession = () => {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const currentView = searchParams.get("view");
+    const sessionId = searchParams.get("sessionId");
+
+    if (!currentView) {
+      setView("list");
+      setSelectedSession(null);
+      return;
+    }
+
+    if (currentView === "add") {
+      setView("add");
+      setSelectedSession(null);
+      return;
+    }
+
+    if (currentView === "edit") {
+      setView("add");
+
+      if (!sessionId) {
+        setSelectedSession(null);
+        return;
+      }
+
+      const matchedSession = sessionList.find((session) => session.id === sessionId) || null;
+      setSelectedSession(matchedSession);
+    }
+  }, [searchParams, sessionList]);
 
   useEffect(() => {
     let filtered = sessionList;
@@ -190,20 +223,16 @@ const managePastSession = () => {
     setSessionToRemove(null);
   };
 
-  const initialValues = selectedSession ? {
-    sessionTitle: selectedSession.name,
-    sessionDescription: selectedSession.name, // Using name as description
-    sessionLink: selectedSession.meeting_link,
-    sessionType: selectedSession.is_free ? 'free' : 'premium',
-    dateTime: selectedSession.date && selectedSession.time ? dayjs(`${selectedSession.date} ${selectedSession.time}`, 'YYYY-MM-DD HH:mm') : undefined,
-    banner: selectedSession.banner_url || "",
-    mentor: selectedSession.mentor_name || ""
-  } : undefined;
+  const openAddView = () => {
+    router.push(`${pathname}?view=add`);
+  };
 
-  const handleEditClick = () => {
-    // Just set to null to add a new session
-    setSelectedSession(null);
-    setView("add");
+  const openEditView = (sessionId: string) => {
+    router.push(`${pathname}?view=edit&sessionId=${sessionId}`);
+  };
+
+  const closeFormView = () => {
+    router.replace(pathname);
   };
 
   return (
@@ -212,10 +241,22 @@ const managePastSession = () => {
     >
       <div className="h-[12%] w-full items-center justify-center flex ">
         <div className="flex justify-between w-full items-center">
-          <div
-            className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
-          >
-            {view === "add" ? (selectedSession ? "Edit Session" : "Create a session") : "Past Session Management"}
+          <div className="flex items-center gap-3">
+            {view === "add" && (
+              <button
+                type="button"
+                onClick={closeFormView}
+                className="flex items-center gap-2 rounded-xl border border-[#1E4640] px-4 py-2 text-[#1E4640] transition-colors hover:bg-[#F5F6F7]"
+              >
+                <LeftOutlined />
+                <span className="font-medium">Back</span>
+              </button>
+            )}
+            <div
+              className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
+            >
+              {view === "add" ? (selectedSession ? "Edit Session" : "Create a session") : "Past Session Management"}
+            </div>
           </div>
           <div className="relative rounded-xl shadow-[0px_0px_4px_0px_#1E464040]">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -260,10 +301,7 @@ const managePastSession = () => {
                   />
                   <button
                     className="text-[#1E4640] font-medium"
-                    onClick={() => {
-                      setSelectedSession(null);
-                      setView("add");
-                    }}
+                    onClick={openAddView}
                   >
                     Add Session
                   </button>
@@ -321,9 +359,7 @@ const managePastSession = () => {
                       onMenuClick={() => console.log("Menu clicked")}
                       onEdit={() => {
                         console.log("🟢 EDIT BUTTON CLICKED");
-                        const rawSession = sessionList.find(s => s.id === session.id) || null;
-                        setSelectedSession(rawSession);
-                        setView("add");
+                        openEditView(session.id);
                       }}
                       onDelete={() => handleRemoveClick(session)}
                       onClick={() => {
@@ -341,10 +377,7 @@ const managePastSession = () => {
         ) : (
           <AddPastSessionModal
             initialValues={selectedSession}
-            onCancel={() => {
-              setView("list");
-              setSelectedSession(null);
-            }}
+            onCancel={closeFormView}
             onSave={handleAddSession}
           />
         )}
