@@ -162,9 +162,10 @@ export const getMentors = async (searchQuery: string = "") => {
     const querySnapshot = await getDocs(mentorsRef);
     const mentors = querySnapshot.docs
       .map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+        id: doc.id,
+        ...doc.data(),
       }))
+      .map((mentor) => mentor as Mentor & Record<string, any>)
       .filter((mentor) => mentorIsActive(mentor))
       .sort((mentorA, mentorB) => {
         const orderDifference =
@@ -177,7 +178,7 @@ export const getMentors = async (searchQuery: string = "") => {
         const createdAtA = String(mentorA?.createdAt ?? "");
         const createdAtB = String(mentorB?.createdAt ?? "");
         return createdAtB.localeCompare(createdAtA);
-      }) as Mentor[];
+      });
 
     return {
       data: mentors.filter((mentor) => mentorMatchesSearch(mentor, searchQuery)),
