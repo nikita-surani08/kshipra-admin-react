@@ -24,6 +24,40 @@ const matchesSearch = (text: string = "", queryText: string = "") => {
   return String(text || "").toLowerCase().includes(normalizedQuery);
 };
 
+const normalizeNoteTitle = (value: string = "") => value.trim().toLowerCase();
+
+const ensureUniqueNoteTitle = async (
+  subjectId: string,
+  topicId: string,
+  title: string,
+  excludeNoteId?: string
+) => {
+  const normalizedTitle = normalizeNoteTitle(title);
+  if (!normalizedTitle) return;
+
+  const notesRef = collection(db, "notes");
+  const duplicateQuery = query(
+    notesRef,
+    where("topic_id", "==", topicId)
+  );
+
+  const duplicateSnapshot = await getDocs(duplicateQuery);
+  const duplicateExists = duplicateSnapshot.docs.some((docSnap) => {
+    if (excludeNoteId && docSnap.id === excludeNoteId) return false;
+    const noteData = docSnap.data() as Note;
+    return (
+      noteData.is_active === true &&
+      noteData.subject_id === subjectId &&
+      noteData.topic_id === topicId &&
+      normalizeNoteTitle(noteData.title) === normalizedTitle
+    );
+  });
+
+  if (duplicateExists) {
+    throw new Error("A note with this title already exists for the selected subject and topic.");
+  }
+};
+
 const updateTopicNotesCount = async (topicId: string, increment: number = 1) => {
   if (typeof topicId !== "string" || !topicId.trim() || topicId === "unknown_topic") {
     return;
@@ -60,11 +94,16 @@ export const addNote = async (noteData: any) => {
   try {
     const nowIso = new Date().toISOString();
     const docRef = doc(collection(db, "notes"));
+    const subjectId = noteData.subject_id ?? "unknown_subject";
+    const topicId = noteData.topic_id ?? "unknown_topic";
+    const title = noteData.title ?? "Untitled";
+
+    await ensureUniqueNoteTitle(subjectId, topicId, title);
 
     const dataToSave = {
-      subject_id: noteData.subject_id ?? "unknown_subject",
-      topic_id: noteData.topic_id ?? "unknown_topic",
-      title: noteData.title ?? "Untitled",
+      subject_id: subjectId,
+      topic_id: topicId,
+      title,
       pdf_url: noteData.pdf_url ?? null, // Firebase accepts null, but not undefined
       html_url: noteData.html_url ?? null, // Firebase accepts null, but not undefined
       order: noteData.order || 1,
@@ -111,6 +150,9 @@ export const addNote = async (noteData: any) => {
     };
   } catch (error) {
     console.error("Error adding note:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to add note");
   }
 };
@@ -119,6 +161,13 @@ export const addNote = async (noteData: any) => {
 export const updateNote = async (noteId: string, updateData: any) => {
   try {
     const noteRef = doc(db, "notes", noteId);
+
+    await ensureUniqueNoteTitle(
+      updateData.subject_id,
+      updateData.topic_id,
+      updateData.title,
+      noteId
+    );
 
     console.log(updateData, "this is update data");
     await updateDoc(noteRef, {
@@ -133,6 +182,9 @@ export const updateNote = async (noteId: string, updateData: any) => {
     return { id: noteId, ...updateData };
   } catch (error) {
     console.error("Error updating note:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to update note");
   }
 };
