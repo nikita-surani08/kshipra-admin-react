@@ -397,7 +397,7 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
 
           <Button
             type="primary"
-            loading={buttonLoading ? { indicator: whiteLoadingIcon } : false}
+            loading={buttonLoading ? { icon: whiteLoadingIcon } : false}
             disabled={buttonLoading}
             onClick={handleSubmit}
             style={{
