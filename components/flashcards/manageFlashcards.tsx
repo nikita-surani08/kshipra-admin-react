@@ -623,6 +623,9 @@ const ManageFlashcards = () => {
         onSave={handleAddFlashcard}
         subjects={subject}
         topics={topic}
+        defaultSubject={selectedSubject}
+        defaultTopic={selectedTopic}
+        loading={loading}
       />
 
       <UploadFlashCardModal

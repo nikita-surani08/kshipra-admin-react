@@ -41,7 +41,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Student Name",
       dataIndex: "studentName",
       key: "studentName",
-      width: "10%",
+      width: "11%",
       render: (text: string) => (
         <Text ellipsis style={{ maxWidth: "100px" }}>
           {text}
@@ -63,7 +63,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Mentor Name",
       dataIndex: "mentorName",
       key: "mentorName",
-      width: "13%",
+      width: "12%",
       render: (text: string) => (
         <Text ellipsis style={{ maxWidth: "130px" }}>
           {text}
@@ -74,7 +74,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Booking Date",
       dataIndex: "bookingDate",
       key: "bookingDate",
-      width: "12%",
+      width: "10%",
       render: (text: string) => (
         <Text ellipsis style={{ maxWidth: "120px" }}>
           {text}
@@ -85,9 +85,9 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Time Slot",
       dataIndex: "timeSlot",
       key: "timeSlot",
-      width: "13%",
+      width: "14%",
       render: (text: string) => (
-        <Text style={{ whiteSpace: "nowrap" }}>
+        <Text ellipsis style={{ whiteSpace: "nowrap", maxWidth: "170px" }}>
           {text}
         </Text>
       ),
@@ -96,21 +96,21 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Duration",
       dataIndex: "duration",
       key: "duration",
-      width: "8%",
-      render: (text: string) => <Text>{text}</Text>,
+      width: "7%",
+      render: (text: string) => <Text ellipsis style={{ maxWidth: "90px" }}>{text}</Text>,
     },
     {
       title: "Amount",
       dataIndex: "amount",
       key: "amount",
-      width: "7%",
-      render: (text: string) => <Text>{text}</Text>,
+      width: "8%",
+      render: (text: string) => <Text ellipsis style={{ maxWidth: "110px" }}>{text}</Text>,
     },
     {
       title: "Booking Status",
       dataIndex: "bookingStatus",
       key: "bookingStatus",
-      width: "10%",
+      width: "9%",
       render: (status: string) => {
         let color = "";
 
@@ -135,32 +135,18 @@ const BookingsList: React.FC<BookingsListProps> = ({
       title: "Payment Status",
       dataIndex: "paymentStatus",
       key: "paymentStatus",
-      width: "9%",
+      width: "7%",
       render: (status: string) => {
-        let color = "";
-        switch (status) {
-          case "Paid":
-            color = "green";
-            break;
-          case "Unpaid":
-            color = "red";
-            break;
-          case "Refunded":
-            color = "orange";
-            break;
-          default:
-            color = "default";
-        }
-        return <Text>{status}</Text>;
+        return <Text ellipsis style={{ maxWidth: "90px" }}>{status}</Text>;
       },
     },
     {
       title: "Created Date",
       dataIndex: "createdDate",
       key: "createdDate",
-      width: "15%",
+      width: "7%",
       render: (text: string) => (
-        <Text ellipsis style={{ maxWidth: "150px" }}>
+        <Text ellipsis style={{ maxWidth: "90px" }}>
           {text}
         </Text>
       ),
@@ -168,7 +154,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
   ];
 
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ width: "100%", height: "100%" }}>
       <Table
         columns={columns}
         dataSource={bookings}
@@ -180,7 +166,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
           width: "100%",
         }}
         scroll={{
-          y: "52vh",
+          y: "46vh",
           x: "max-content",
         }}
         pagination={{
@@ -188,6 +174,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
           pageSize: pagination.pageSize,
           total: pagination.total,
           showSizeChanger: true,
+          responsive: true,
           showTotal: (total) => `Total ${total} items`,
           onChange: onPageChange,
           onShowSizeChange: (current, pageSize) =>

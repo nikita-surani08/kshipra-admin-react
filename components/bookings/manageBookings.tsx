@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Work_Sans } from "next/font/google";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import BookingsList, { Booking } from "./BookingsList"; // Import new list
 import "./bookings.css";
 import { DownloadOutlined } from "@ant-design/icons";
@@ -12,38 +12,28 @@ const worksans = Work_Sans({ weight: ["400", "500", "600", "700"], subsets: ["la
 import { getBookings } from "../../service/api/bookings.api";
 
 const ManageBookings = () => {
-  const [bookingsData, setBookingsData] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalBookings, setTotalBookings] = useState(0);
-  const [lastVisibleDocs, setLastVisibleDocs] = useState<Record<number, any | null>>({});
+
+  const bookingsData = useMemo(() => {
+    const startIndex = Math.max(0, (currentPage - 1) * pageSize);
+    return allBookings.slice(startIndex, startIndex + pageSize);
+  }, [allBookings, currentPage, pageSize]);
 
   useEffect(() => {
     let mounted = true;
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const isSearching = searchQuery.trim().length > 0;
-        const lastVisible = isSearching
-          ? null
-          : currentPage === 1
-            ? null
-            : lastVisibleDocs[currentPage - 1];
-        const res: any = await getBookings(
-          currentPage,
-          pageSize,
-          lastVisible,
-          searchQuery
-        );
+        const res: any = await getBookings(1, 0, null, searchQuery);
         if (mounted && res?.data) {
-          setBookingsData(res.data);
+          setAllBookings(res.data);
           setTotalBookings(res.total);
-          if (!isSearching && res.lastVisible) {
-            setLastVisibleDocs(prev => ({ ...prev, [currentPage]: res.lastVisible }));
-          }
         }
       } catch (e) {
         console.error("Failed to load bookings", e);
@@ -55,18 +45,23 @@ const ManageBookings = () => {
     return () => {
       mounted = false;
     };
-  }, [currentPage, pageSize, searchQuery]);
+  }, [searchQuery]);
 
   useEffect(() => {
     setCurrentPage(1);
-    setLastVisibleDocs({});
   }, [searchQuery]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(totalBookings / pageSize));
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, pageSize, totalBookings]);
 
   const handlePageChange = (page: number, newPageSize?: number) => {
     if (newPageSize && newPageSize !== pageSize) {
       setPageSize(newPageSize);
       setCurrentPage(1);
-      setLastVisibleDocs({});
     } else {
       setCurrentPage(page);
     }
@@ -76,41 +71,12 @@ const ManageBookings = () => {
     console.log("Starting CSV export...");
     setExportLoading(true);
     try {
-      // Fetch all bookings data (not paginated)
-      const allBookings: Booking[] = [];
-      const bookingIds = new Set(); // Track unique booking IDs to prevent duplicates
-      let lastVisible: any = null;
-      let hasMore = true;
-      const batchSize = 100; // Fetch in batches of 100
-      let currentPage = 1; // Track current page for proper pagination
-
-      console.log("Fetching bookings data...");
-      while (hasMore) {
-        const res: any = await getBookings(currentPage, batchSize, lastVisible);
-        console.log("Batch result:", res);
-        if (res?.data && res.data.length > 0) {
-          // Add only unique bookings
-          res.data.forEach((booking: Booking) => {
-            if (booking.id && !bookingIds.has(booking.id)) {
-              bookingIds.add(booking.id);
-              allBookings.push(booking);
-            }
-          });
-          
-          lastVisible = res.lastVisible;
-          currentPage++; // Increment page for next batch
-          // Stop if we've got all records or the last batch was smaller than batch size
-          hasMore = res.data.length === batchSize && allBookings.length < res.total;
-          console.log("Unique bookings so far:", allBookings.length, "Total expected:", res.total);
-        } else {
-          hasMore = false;
-        }
-      }
-
-      console.log("Total unique bookings fetched:", allBookings.length);
+      const res: any = await getBookings(1, 0);
+      const exportRows: Booking[] = res?.data || [];
+      console.log("Total bookings fetched for export:", exportRows.length);
 
       // Convert to CSV
-      if (allBookings.length === 0) {
+      if (exportRows.length === 0) {
         console.log("No bookings data to export");
         alert("No bookings data to export");
         return;
@@ -133,7 +99,7 @@ const ManageBookings = () => {
       // CSV rows
       const csvRows = [
         headers.join(","),
-        ...allBookings.map(booking => [
+        ...exportRows.map(booking => [
           `"${booking.studentName || ""}"`,
           `"${booking.studentEmail || ""}"`,
           `"${booking.mentorName || ""}"`,
@@ -241,7 +207,7 @@ const ManageBookings = () => {
         </div>
 
         {/* Bookings List Table or No Content */}
-        <div className="h-full flex-1 w-full flex bg-white px-4 pt-4 overflow-hidden">
+        <div className="h-full flex-1 min-h-0 w-full flex bg-white px-4 pt-4 pb-6 overflow-hidden">
           {bookingsData.length === 0 && !loading ? (
             <div className="flex flex-col items-center justify-center w-full h-full">
               <Image

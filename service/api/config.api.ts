@@ -223,6 +223,8 @@ export const getTopics = async (subjectId: string) => {
       ...doc.data(),
     }));
 
+
+
     console.log("Final topics data:", topics);
     return topics;
   } catch (error: any) {
@@ -381,6 +383,7 @@ export const postSeedNotes = async () => {
           updated_at: nowIso,
           document_id: noteDocRef.id,
         };
+console.log('noteData...............',noteData);
 
         await setDoc(noteDocRef, noteData);
         successCount++;

@@ -5,9 +5,6 @@ import {
   getDoc,
   query,
   orderBy,
-  limit,
-  startAfter,
-  getCountFromServer,
 } from "firebase/firestore";
 import { db } from "../config/firebase.config";
 
@@ -211,31 +208,9 @@ export const getBookings = async (
 ) => {
   try {
     const ordersRef = collection(db, "userOrders");
-    const isSearching = normalizeSearchTerm(searchQuery).length > 0;
-
-    // Get total count for pagination
-    const countQuery = query(ordersRef);
-    const totalSnap = await getCountFromServer(countQuery);
-    const total = totalSnap.data().count;
-
-    // Build query
-    let q;
-    if (isSearching) {
-      q = query(ordersRef, orderBy("createdAt", "desc"));
-    } else if (page === 1 || !lastVisible) {
-      q = query(ordersRef, orderBy("createdAt", "desc"), limit(pageSize));
-    } else {
-      q = query(
-        ordersRef,
-        orderBy("createdAt", "desc"),
-        startAfter(lastVisible),
-        limit(pageSize),
-      );
-    }
-
+    const q = query(ordersRef, orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     const results: any[] = [];
-    const lastVisibleDoc = snap.docs[snap.docs.length - 1];
 
     for (const docSnap of snap.docs) {
       const data: any = docSnap.data();
@@ -369,28 +344,19 @@ export const getBookings = async (
       });
     }
 
-    if (isSearching) {
-      const filtered = results.filter((booking) =>
-        bookingMatchesSearch(booking, searchQuery)
-      );
-      const startIndex = Math.max(0, (page - 1) * pageSize);
-      const paged = filtered.slice(startIndex, startIndex + pageSize);
-      return {
-        data: paged,
-        lastVisible: null,
-        total: filtered.length,
-        page,
-        pageSize,
-      };
-    }
+    const filteredResults = results.filter((booking) =>
+      bookingMatchesSearch(booking, searchQuery)
+    );
+    const shouldReturnAll = pageSize <= 0;
+    const startIndex = shouldReturnAll ? 0 : Math.max(0, (page - 1) * pageSize);
+    const pagedResults = shouldReturnAll
+      ? filteredResults
+      : filteredResults.slice(startIndex, startIndex + pageSize);
 
     return {
-      data: results,
-      lastVisible: lastVisibleDoc,
-      total: Math.max(
-        total - (snap.docs.length - results.length),
-        results.length,
-      ),
+      data: pagedResults,
+      lastVisible: null,
+      total: filteredResults.length,
       page,
       pageSize,
     };
