@@ -6,6 +6,8 @@ import { useState, useEffect, useMemo } from "react";
 import BookingsList, { Booking } from "./BookingsList"; // Import new list
 import "./bookings.css";
 import { DownloadOutlined } from "@ant-design/icons";
+import SuccessAlert from "@/components/alerts/SuccessAlert";
+import ErrorAlert from "@/components/alerts/ErrorAlert";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"], subsets: ["latin"] });
 
@@ -19,6 +21,10 @@ const ManageBookings = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalBookings, setTotalBookings] = useState(0);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSuccessAlertOpen, setIsSuccessAlertOpen] = useState(false);
+  const [isErrorAlertOpen, setIsErrorAlertOpen] = useState(false);
 
   const bookingsData = useMemo(() => {
     const startIndex = Math.max(0, (currentPage - 1) * pageSize);
@@ -135,6 +141,10 @@ const ManageBookings = () => {
       
       link.click();
       console.log("Link clicked - download should start");
+      setSuccessMessage("Export completed successfully.");
+      setErrorMessage(null);
+      setIsSuccessAlertOpen(true);
+      setIsErrorAlertOpen(false);
       
       // Clean up
       setTimeout(() => {
@@ -144,15 +154,42 @@ const ManageBookings = () => {
       }, 100);
     } catch (error) {
       console.error("Error exporting CSV:", error);
-      alert("Failed to export bookings data: " + (error as Error).message);
+      setErrorMessage("Failed to export bookings data: " + (error as Error).message);
+      setSuccessMessage(null);
+      setIsErrorAlertOpen(true);
+      setIsSuccessAlertOpen(false);
     } finally {
       setExportLoading(false);
       console.log("Export loading state reset");
     }
   };
 
+  const handleSuccessAlertClose = () => {
+    setIsSuccessAlertOpen(false);
+    setSuccessMessage(null);
+  };
+
+  const handleErrorAlertClose = () => {
+    setIsErrorAlertOpen(false);
+    setErrorMessage(null);
+  };
+
   return (
     <div className={`flex flex-col px-6 py-4 bg-[#F5F6F7] h-full ${worksans.className}`}>
+      {successMessage && (
+        <SuccessAlert
+          message={successMessage}
+          open={isSuccessAlertOpen}
+          onClose={handleSuccessAlertClose}
+        />
+      )}
+      {errorMessage && (
+        <ErrorAlert
+          message={errorMessage}
+          open={isErrorAlertOpen}
+          onClose={handleErrorAlertClose}
+        />
+      )}
       {/* Header Section */}
       <div className="h-[12%] w-full items-center justify-center flex ">
         <div className="flex justify-between w-full items-center">

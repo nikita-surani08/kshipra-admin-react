@@ -11,13 +11,14 @@ import {
   message,
   UploadFile,
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { LoadingOutlined, UploadOutlined } from "@ant-design/icons";
 import { Subject, Topic } from "./types";
 import { Work_Sans } from "next/font/google";
 import Image from "next/image";
 import { getTopics, handleUpload, createTopic } from "@/service/api/config.api";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
+const whiteLoadingIcon = <LoadingOutlined spin style={{ color: "#ffffff" }} />;
 
 interface AddNoteModalProps {
   visible: boolean;
@@ -39,9 +40,11 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
   const [topic, setTopic] = useState<any>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentFileUrl, setCurrentFileUrl] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [options, setOptions] = useState<any[]>([]);
+  const buttonLoading = Boolean(loading || isUploading || isSubmitting);
 
   const fetchTopics = async () => {
     try {
@@ -108,6 +111,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
 
   const handleSubmit = async () => {
     try {
+      setIsSubmitting(true);
       const values = await form.validateFields();
       let pdfUrl = "";
       let htmlUrl = "";
@@ -226,16 +230,17 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         total_flashcards: 0,
       };
 
-      // Reset form and call onSave
+      // Wait for the parent save so the modal stays in loading state until completion
+      await onSave(updatedValues);
+
+      // Reset form only after the save succeeds
       form.resetFields();
       setFileList([]);
       setCurrentFileUrl("");
-      onSave(updatedValues);
     } catch (error: any) {
       console.error("Form submission failed:", error);
-      if (!error.message.includes("Please provide either a file or a link")) {
-        message.error("Failed to save note. Please try again.");
-      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -413,6 +418,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         <div className={`flex justify-end gap-4 mt-8 ${worksans.className}`}>
           <Button
             onClick={onCancel}
+            disabled={buttonLoading}
             style={{
               height: 44,
               width: 120,
@@ -427,7 +433,8 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
 
           <Button
             type="primary"
-            loading={loading}
+            loading={buttonLoading ? { indicator: whiteLoadingIcon } : false}
+            disabled={buttonLoading}
             onClick={handleSubmit}
             style={{
               height: 44,
@@ -437,7 +444,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
               fontFamily: "Work Sans",
             }}
           >
-            Save
+            {buttonLoading ? "Saving..." : "Save"}
           </Button>
         </div>
       </Form>

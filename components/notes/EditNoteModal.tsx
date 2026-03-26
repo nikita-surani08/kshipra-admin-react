@@ -12,11 +12,12 @@ import {
   message,
   UploadFile,
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { LoadingOutlined, UploadOutlined } from "@ant-design/icons";
 import { Work_Sans } from "next/font/google";
 import { getTopics, handleUpload } from "@/service/api/config.api";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
+const whiteLoadingIcon = <LoadingOutlined spin style={{ color: "#ffffff" }} />;
 
 interface EditNoteModalProps {
   visible: boolean;
@@ -42,6 +43,7 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [currentFileUrl, setCurrentFileUrl] = useState<string | null>(null);
+  const buttonLoading = Boolean(loading || isUploading);
 
   useEffect(() => {
     const fetchTopicsForSubject = async () => {
@@ -395,7 +397,8 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
 
           <Button
             type="primary"
-            loading={loading}
+            loading={buttonLoading ? { indicator: whiteLoadingIcon } : false}
+            disabled={buttonLoading}
             onClick={handleSubmit}
             style={{
               height: 44,
@@ -405,7 +408,7 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
               fontFamily: "Work Sans",
             }}
           >
-            Save
+            {buttonLoading ? "Saving..." : "Save"}
           </Button>
         </div>
       </Form>

@@ -254,23 +254,26 @@ const ManageNotes = () => {
     try {
       setLoading(true);
       // Now result will receive subject_id correctly
-      const result = await addNote(newNote);
+      await addNote(newNote);
 
       setSuccessMessage("Note added successfully.");
       setErrorMessage(null);
       setIsSuccessAlertOpen(true);
+      setIsErrorAlertOpen(false);
       setIsAddModalVisible(false);
+      await fetchNotes(pagination.current, pagination.pageSize);
     } catch (error) {
       console.error("Error adding note:", error);
       const message =
         error instanceof Error ? error.message : "Failed to add note.";
       setErrorMessage(message);
+      setSuccessMessage(null);
       setIsErrorAlertOpen(true);
+      setIsSuccessAlertOpen(false);
+      throw error;
     } finally {
       setLoading(false);
     }
-
-    fetchNotes(pagination.current, pagination.pageSize);
   };
 
   const handleEditNote = async (values: any) => {

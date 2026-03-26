@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Work_Sans } from "next/font/google";
-import { Dropdown, Space, Button, Pagination, message } from "antd";
+import { Dropdown, Space, Button, Pagination } from "antd";
 import { DownOutlined, PlusOutlined, DragOutlined, SaveOutlined, LeftOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -20,6 +20,8 @@ import {
   updateMentorOrders,
 } from "@/service/api/mentor.api";
 import { handleImageUpload } from "@/service/api/config.api";
+import SuccessAlert from "@/components/alerts/SuccessAlert";
+import ErrorAlert from "@/components/alerts/ErrorAlert";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
@@ -190,10 +192,10 @@ const manageMentor = () => {
 
       if (selectedMentor) {
         await updateMentor(selectedMentor.id, mentorData);
-        setSuccessMessage("Mentor updated successfully.");
+        setSuccessMessage("Updated mentor details successfully.");
       } else {
         await addMentor(mentorData);
-        setSuccessMessage("Mentor added successfully.");
+        setSuccessMessage("Saved mentor details successfully.");
       }
 
       setErrorMessage(null);
@@ -299,10 +301,42 @@ const manageMentor = () => {
     }
   };
 
+  const handleSuccessAlertClose = (
+    event?: SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") return;
+    setIsSuccessAlertOpen(false);
+    setSuccessMessage(null);
+  };
+
+  const handleErrorAlertClose = (
+    event?: SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") return;
+    setIsErrorAlertOpen(false);
+    setErrorMessage(null);
+  };
+
   return (
     <div
       className={`flex h-full min-h-0 flex-col bg-[#F5F6F7] px-4 py-4 sm:px-6 ${worksans.className}`}
     >
+      {successMessage && (
+        <SuccessAlert
+          message={successMessage}
+          open={isSuccessAlertOpen}
+          onClose={handleSuccessAlertClose}
+        />
+      )}
+      {errorMessage && (
+        <ErrorAlert
+          message={errorMessage}
+          open={isErrorAlertOpen}
+          onClose={handleErrorAlertClose}
+        />
+      )}
       <div className="flex w-full flex-shrink-0 items-center justify-center pb-4">
         <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">

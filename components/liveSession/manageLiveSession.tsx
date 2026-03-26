@@ -12,6 +12,8 @@ import LiveSessionCard from "./LiveSessionCard";
 import ReorderLiveSessionModal from "./ReorderLiveSessionModal";
 import { addSession, getSessions, updateSession, deleteSession, updateSessionOrders } from "../../service/api/liveSession.api";
 import { LiveSession } from "../../service/api/liveSession.api";
+import SuccessAlert from "@/components/alerts/SuccessAlert";
+import ErrorAlert from "@/components/alerts/ErrorAlert";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
@@ -28,6 +30,10 @@ const ManageLiveSession = () => {
   const [loading, setLoading] = useState(false);
   const [displaySessions, setDisplaySessions] = useState<any[]>([]);
   const [reorderModalVisible, setReorderModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSuccessAlertOpen, setIsSuccessAlertOpen] = useState(false);
+  const [isErrorAlertOpen, setIsErrorAlertOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -147,6 +153,7 @@ const ManageLiveSession = () => {
 
   const handleAddSession = async (values: any) => {
     try {
+      setLoading(true);
       console.log("Session data:", values);
       
       // Calculate next order number for new sessions
@@ -190,15 +197,27 @@ const ManageLiveSession = () => {
       }
 
       console.log("Session operation successful:", result);
+      setSuccessMessage(selectedSession ? "Updated successfully" : "Saved successfully");
+      setErrorMessage(null);
+      setIsSuccessAlertOpen(true);
+      setIsErrorAlertOpen(false);
       
       router.replace(pathname);
     } catch (error) {
       console.error("Failed to save session:", error);
+      setErrorMessage("Failed to save session.");
+      setSuccessMessage(null);
+      setIsErrorAlertOpen(true);
+      setIsSuccessAlertOpen(false);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSaveReorder = async (reorderedSessions: LiveSession[]) => {
     try {
+      setLoading(true);
       // Update the order in Firestore
       await updateSessionOrders(reorderedSessions);
       
@@ -207,8 +226,18 @@ const ManageLiveSession = () => {
       setReorderModalVisible(false);
       
       console.log("Session order saved successfully");
+      setSuccessMessage("Saved successfully");
+      setErrorMessage(null);
+      setIsSuccessAlertOpen(true);
+      setIsErrorAlertOpen(false);
     } catch (error) {
       console.error("Failed to save session order:", error);
+      setErrorMessage("Failed to save session order.");
+      setSuccessMessage(null);
+      setIsErrorAlertOpen(true);
+      setIsSuccessAlertOpen(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -224,12 +253,23 @@ const ManageLiveSession = () => {
   const handleRemoveConfirm = async () => {
     if (sessionToRemove) {
       try {
+        setLoading(true);
         await deleteSession(sessionToRemove.id);
         setSessionList(prev => prev.filter(session => session.id !== sessionToRemove.id));
         setRemoveModalVisible(false);
         setSessionToRemove(null);
+        setSuccessMessage("Deleted successfully");
+        setErrorMessage(null);
+        setIsSuccessAlertOpen(true);
+        setIsErrorAlertOpen(false);
       } catch (error) {
         console.error("Failed to delete session:", error);
+        setErrorMessage("Failed to delete session.");
+        setSuccessMessage(null);
+        setIsErrorAlertOpen(true);
+        setIsSuccessAlertOpen(false);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -251,10 +291,34 @@ const ManageLiveSession = () => {
     router.replace(pathname);
   };
 
+  const handleSuccessAlertClose = () => {
+    setIsSuccessAlertOpen(false);
+    setSuccessMessage(null);
+  };
+
+  const handleErrorAlertClose = () => {
+    setIsErrorAlertOpen(false);
+    setErrorMessage(null);
+  };
+
   return (
     <div
       className={`flex flex-col px-6 py-4 bg-[#F5F6F7] h-full ${worksans.className}`}
     >
+      {successMessage && (
+        <SuccessAlert
+          message={successMessage}
+          open={isSuccessAlertOpen}
+          onClose={handleSuccessAlertClose}
+        />
+      )}
+      {errorMessage && (
+        <ErrorAlert
+          message={errorMessage}
+          open={isErrorAlertOpen}
+          onClose={handleErrorAlertClose}
+        />
+      )}
       <div className="h-[12%] w-full items-center justify-center flex ">
         <div className="flex justify-between w-full items-center">
           <div className="flex items-center gap-3">
@@ -404,7 +468,7 @@ const ManageLiveSession = () => {
         visible={removeModalVisible}
         onCancel={handleRemoveCancel}
         onRemove={handleRemoveConfirm}
-        loading={false}
+        loading={loading}
       />
       
       {/* Reorder Live Session Modal */}
