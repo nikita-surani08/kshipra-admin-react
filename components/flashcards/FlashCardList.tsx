@@ -114,21 +114,15 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
   const { noteTitles, loadingNotes } = useNoteTitles(noteIds);
   const columns = [
     {
-      title: "Note Title",
-      dataIndex: ["note_id"],
-      key: "noteTitle",
-      width: "16%",
-      render: (noteId: string) => {
-        if (loadingNotes[noteId]) {
-          return <Skeleton.Input active size="small" style={{ width: 150 }} />;
-        }
-        const title = noteTitles[noteId] || "Untitled Note";
-        return (
-          <Text ellipsis style={{ cursor: "pointer", maxWidth: "180px" }}>
-            {title}
-          </Text>
-        );
-      },
+      title: "Question",
+      dataIndex: "question",
+      key: "question",
+      width: "13%",
+      render: (text: string, record: Flashcard) => (
+        <Text ellipsis style={{ cursor: "pointer", maxWidth: "150px" }}>
+          {text}
+        </Text>
+      ),
     },
     {
       title: "Question Title",
@@ -138,17 +132,6 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
       render: (text: string) => (
         <Text ellipsis style={{ cursor: "pointer", maxWidth: "120px" }}>
           {text || "-"}
-        </Text>
-      ),
-    },
-    {
-      title: "Question",
-      dataIndex: "question",
-      key: "question",
-      width: "13%",
-      render: (text: string, record: Flashcard) => (
-        <Text ellipsis style={{ cursor: "pointer", maxWidth: "150px" }}>
-          {text}
         </Text>
       ),
     },
@@ -173,6 +156,23 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
           {text}
         </Text>
       ),
+    },
+    {
+      title: "Note Title",
+      dataIndex: ["note_id"],
+      key: "noteTitle",
+      width: "16%",
+      render: (noteId: string) => {
+        if (loadingNotes[noteId]) {
+          return <Skeleton.Input active size="small" style={{ width: 150 }} />;
+        }
+        const title = noteTitles[noteId] || "Untitled Note";
+        return (
+          <Text ellipsis style={{ cursor: "pointer", maxWidth: "180px" }}>
+            {title}
+          </Text>
+        );
+      },
     },
     {
       title: "Tag",

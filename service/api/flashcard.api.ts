@@ -19,7 +19,6 @@ import {
 import { db } from "../config/firebase.config";
 import { getStorage, ref, uploadBytes } from "firebase/storage";
 import * as XLSX from "xlsx";
-import { addNote } from "./notes.api";
 
 const normalizeSearchTerm = (value: string = "") => value.trim().toLowerCase();
 
@@ -239,7 +238,7 @@ export const uploadFlashcardsFromExcel = async (
   
   if (!hasNoteTitle || !hasQuestion || !hasAnswer) {
     throw new Error(
-      "Invalid Excel template. Ensure the first row contains the columns: Note title, Question, Answer. Question title, Answer title, and Tag are optional."
+      'Invalid Excel template. Use headers such as: Question, Answer, Question title, Answer title, Note title, Tag. Columns can be in any order, but "Question", "Answer", and "Note title" are required.'
     );
   }
   
@@ -336,26 +335,12 @@ export const uploadFlashcardsFromExcel = async (
     }
 
     const note = noteMap.get(normalizeKey(noteTitle));
-    let noteId: string;
-
     if (!note) {
-      try {
-        const newNote = await addNote({
-          subject_id: subjectId,
-          topic_id: topicId,
-          title: noteTitle,
-          pdf_url: "",
-        });
-        noteId = newNote.document_id;
-        noteMap.set(normalizeKey(noteTitle), { id: noteId, title: noteTitle });
-      } catch (err) {
-        console.error("Error creating note:", err);
-        skippedCount += 1;
-        continue;
-      }
-    } else {
-      noteId = note.id;
+      skippedCount += 1;
+      continue;
     }
+
+    const noteId = note.id;
 
     const nowIso = new Date().toISOString();
     const docRef = doc(collection(db, "flashcards"));
