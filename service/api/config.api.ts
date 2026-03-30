@@ -14,6 +14,17 @@ import { db } from "../config/firebase.config";
 import { getStorage } from "firebase/storage";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+const S3_PRESIGN_ENDPOINT =
+  process.env.NEXT_PUBLIC_S3_PRESIGN_URL ??
+  "https://gets3presignedurl-e5pwqbt5lq-uc.a.run.app";
+
+interface PresignedUploadResponse {
+  preSignedUrl: string;
+  outPutUrl: string;
+  key?: string;
+  expiresIn?: number;
+}
+
 interface Subject {
   id?: string;
   name: string;
@@ -80,12 +91,11 @@ export const handleImageUpload = async (
   // Create a unique filename with original name and timestamp
   const timestamp = Date.now();
   const newFileName = `${originalName}.${fileExtension}`;
-  // Restore cleaner filename logic if desired, or keep unique. 
-  // Staying consistent with previous iterations, I'll use the unique timestamp one if that was working, 
-  // but standard practice is often just name+ext or uuid. 
+  // Restore cleaner filename logic if desired, or keep unique.
+  // Staying consistent with previous iterations, I'll use the unique timestamp one if that was working,
+  // but standard practice is often just name+ext or uuid.
   // Let's use the unique one to avoid conflicts.
   const uniqueFileName = `${originalName}_${timestamp}.${fileExtension}`;
-
 
   // Create storage reference with the new filename
   const storageRef = ref(storage, `uploads/${folderName}/${uniqueFileName}`);
@@ -101,6 +111,94 @@ export const handleImageUpload = async (
     return downloadURL;
   } catch (error) {
     console.error("Error uploading image:", error);
+    throw error;
+  }
+};
+
+export const getImageUploadPresignedUrl = async (
+  file: File,
+  resourceType: string = "images"
+): Promise<PresignedUploadResponse> => {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Only image files are allowed");
+  }
+
+  const fileExtension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const originalName = file.name.replace(/\.[^/.]+$/, "");
+  const safeBaseName = originalName
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9-_]/g, "")
+    .toLowerCase();
+  const uniqueFileName = `${safeBaseName || resourceType}-${Date.now()}.${fileExtension}`;
+
+  const params = new URLSearchParams({
+    fileName: uniqueFileName,
+    resourceType,
+    contentType: file.type,
+  });
+
+  const presignResponse = await fetch(
+    `${S3_PRESIGN_ENDPOINT}?${params.toString()}`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!presignResponse.ok) {
+    throw new Error("Failed to get image upload URL");
+  }
+
+  const presignData =
+    (await presignResponse.json()) as Partial<PresignedUploadResponse>;
+    (await presignResponse.json()) as Partial<PresignedUploadResponse>;
+
+  if (!presignData.preSignedUrl || !presignData.outPutUrl) {
+    throw new Error("Invalid image upload response");
+  }
+
+  return {
+    preSignedUrl: presignData.preSignedUrl,
+    outPutUrl: presignData.outPutUrl,
+    key: presignData.key,
+    expiresIn: presignData.expiresIn,
+  };
+};
+
+export const uploadImageToPresignedUrl = async (
+  file: File,
+  preSignedUrl: string
+) => {
+  const uploadResponse = await fetch(preSignedUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type,
+    },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("Failed to upload image");
+  }
+
+  return true;
+};
+
+export const handleImageUploadWithPresignedUrl = async (
+  file: File,
+  resourceType: string = "images"
+) => {
+  try {
+    const { preSignedUrl, outPutUrl } = await getImageUploadPresignedUrl(
+      file,
+      resourceType
+    );
+
+    await uploadImageToPresignedUrl(file, preSignedUrl);
+
+    return outPutUrl;
+  } catch (error) {
+    console.error("Error uploading image with presigned URL:", error);
     throw error;
   }
 };

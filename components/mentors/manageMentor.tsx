@@ -19,7 +19,7 @@ import {
   deleteMentor,
   updateMentorOrders,
 } from "@/service/api/mentor.api";
-import { handleImageUpload } from "@/service/api/config.api";
+import { handleImageUpload, handleImageUploadWithPresignedUrl } from "@/service/api/config.api";
 import SuccessAlert from "@/components/alerts/SuccessAlert";
 import ErrorAlert from "@/components/alerts/ErrorAlert";
 
@@ -175,6 +175,9 @@ const manageMentor = () => {
       if (values.imageFile) {
         imageUrl = await handleImageUpload(values.imageFile);
         console.log("Uploaded new image:", imageUrl);
+
+        // Once the AWS presigned upload issue is resolved, replace the line above with:
+        // imageUrl = await handleImageUploadWithPresignedUrl(values.imageFile, "images");
       }
       console.log("Final imageUrl to save:", imageUrl);
 

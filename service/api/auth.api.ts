@@ -20,7 +20,6 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase.config";
-
 import { randomUUID } from "crypto";
 
 export const signInWithFirebase = async (

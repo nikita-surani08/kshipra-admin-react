@@ -7,6 +7,7 @@ import { Work_Sans } from "next/font/google"; // Leave this as is
 import styles from "./liveSession.module.css";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../service/config/firebase.config";
+// import { handleImageUploadWithPresignedUrl } from "@/service/api/config.api";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
@@ -127,12 +128,14 @@ const AddLiveSessionModal: React.FC<AddLiveSessionModalProps> = ({
 
       let bannerUrl = bannerPreview;
 
-      // Upload banner to Firebase Storage if file exists
       if (bannerFile) {
         try {
           const storageRef = ref(storage, `uploads/sessions/${Date.now()}_${bannerFile.name}`);
           const snapshot = await uploadBytes(storageRef, bannerFile);
           bannerUrl = await getDownloadURL(snapshot.ref);
+
+          // Once the AWS presigned upload issue is resolved, replace the 3 lines above with:
+          // bannerUrl = await handleImageUploadWithPresignedUrl(bannerFile, "images");
           console.log("Banner uploaded:", bannerUrl);
         } catch (error) {
           console.error("Error uploading banner:", error);
