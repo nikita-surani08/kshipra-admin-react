@@ -44,7 +44,19 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
   const [currentFileUrl, setCurrentFileUrl] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [options, setOptions] = useState<any[]>([]);
+  const [fileValidationError, setFileValidationError] = useState("");
   const buttonLoading = Boolean(loading || isUploading || isSubmitting);
+  const isSaveDisabled = buttonLoading || Boolean(fileValidationError);
+
+  const isSupportedNoteFile = (file: File) => {
+    const fileName = file.name.toLowerCase();
+    return (
+      file.type === "application/pdf" ||
+      file.type === "text/html" ||
+      fileName.endsWith(".pdf") ||
+      fileName.endsWith(".html")
+    );
+  };
 
   const fetchTopics = async () => {
     try {
@@ -106,6 +118,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
       setSearchValue("");
       setFileList([]);
       setCurrentFileUrl("");
+      setFileValidationError("");
     }
   }, [visible]);
 
@@ -319,21 +332,26 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         <Form.Item
           name="file"
           label="File (PDF or HTML)"
-          rules={[
-            {
-              validator: (_, value) => {
-                if (!value && fileList.length === 0 && !currentFileUrl) {
-                  return Promise.reject(
-                    "Please upload a file or provide a link"
-                  );
-                }
+        rules={[
+          {
+            validator: (_, value) => {
+              if (fileValidationError) {
+                return Promise.reject(fileValidationError);
+              }
+              if (!value && fileList.length === 0 && !currentFileUrl) {
+                return Promise.reject(
+                  "Please upload a file or provide a link"
+                );
+              }
                 return Promise.resolve();
               },
             },
-          ]}
-          className={`font-medium text-[#1E4640] ${worksans.className}`}
-        >
-          <div className="space-y-3">
+        ]}
+        validateStatus={fileValidationError ? "error" : undefined}
+        help={fileValidationError || undefined}
+        className={`font-medium text-[#1E4640] ${worksans.className}`}
+      >
+        <div className="space-y-3">
             <Input
               placeholder="Or paste file link here (PDF or HTML)"
               style={{
@@ -346,6 +364,9 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
               onChange={(e) => {
                 const value = e.target.value;
                 setCurrentFileUrl(value);
+                if (value) {
+                  setFileValidationError("");
+                }
                 // If user starts typing, clear any selected files
                 if (value) {
                   setFileList([]);
@@ -355,13 +376,20 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
 
             <Upload.Dragger
               beforeUpload={(file) => {
-                const isPdf = file.type === "application/pdf";
-                const isHtml = file.type === "text/html" || file.name.toLowerCase().endsWith('.html');
-                
-                if (!isPdf && !isHtml) {
-                  message.error("You can only upload PDF or HTML files!");
+                if (!isSupportedNoteFile(file)) {
+                  const errorMessage = "Only PDF or HTML files are supported.";
+                  setFileValidationError(errorMessage);
+                  form.setFields([
+                    {
+                      name: "file",
+                      errors: [errorMessage],
+                    },
+                  ]);
+                  message.error(errorMessage);
                   return Upload.LIST_IGNORE;
                 }
+                setFileValidationError("");
+                form.setFields([{ name: "file", errors: [] }]);
                 return false; // Prevent automatic upload
               }}
               fileList={fileList}
@@ -370,10 +398,14 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
                 setFileList(newFileList);
                 if (newFileList.length > 0) {
                   setCurrentFileUrl("");
+                  setFileValidationError("");
+                  form.setFields([{ name: "file", errors: [] }]);
                 }
               }}
               onRemove={() => {
                 setFileList([]);
+                setFileValidationError("");
+                form.setFields([{ name: "file", errors: [] }]);
                 return true;
               }}
               maxCount={1}
@@ -434,13 +466,17 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
           <Button
             type="primary"
             loading={buttonLoading ? { icon: whiteLoadingIcon } : false}
-            disabled={buttonLoading}
+            disabled={isSaveDisabled}
             onClick={handleSubmit}
             style={{
               height: 44,
               width: 120,
               borderRadius: 8,
-              backgroundColor: "#0B5447",
+              backgroundColor: isSaveDisabled ? "rgba(11, 84, 71, 0.45)" : "#0B5447",
+              color: "#ffffff",
+              border: "none",
+              backdropFilter: isSaveDisabled ? "blur(4px)" : "none",
+              WebkitBackdropFilter: isSaveDisabled ? "blur(4px)" : "none",
               fontFamily: "Work Sans",
             }}
           >
