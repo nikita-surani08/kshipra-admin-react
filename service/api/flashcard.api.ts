@@ -194,17 +194,6 @@ export const uploadFlashcardsFromExcel = async (
     throw new Error("Subject and topic must be selected before uploading.");
   }
 
-  const storage = getStorage();
-  const timestamp = Date.now();
-  const originalName = (file as File).name ?? "flashcards.xlsx";
-  const sanitizedName = originalName.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storageRef = ref(
-    storage,
-    `uploads/flashcards/${timestamp}-${sanitizedName}`
-  );
-
-  await uploadBytes(storageRef, file);
-
   const arrayBuffer =
     "arrayBuffer" in file
       ? await (file as File).arrayBuffer()
@@ -273,6 +262,12 @@ export const uploadFlashcardsFromExcel = async (
   console.log("Fetching notes for subject:", subjectId, "topic:", topicId);
   console.log("Found notes count:", notesSnapshot.size);
 
+  if (notesSnapshot.empty) {
+    throw new Error(
+      "Please create notes first before uploading flashcards."
+    );
+  }
+
   const noteMap = new Map<string, { id: string; title: string }>();
   notesSnapshot.forEach((noteDoc) => {
     const data = noteDoc.data() as { title?: string };
@@ -290,6 +285,17 @@ export const uploadFlashcardsFromExcel = async (
   });
 
   console.log("Note map keys:", Array.from(noteMap.keys()));
+
+  const storage = getStorage();
+  const timestamp = Date.now();
+  const originalName = (file as File).name ?? "flashcards.xlsx";
+  const sanitizedName = originalName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storageRef = ref(
+    storage,
+    `uploads/flashcards/${timestamp}-${sanitizedName}`
+  );
+
+  await uploadBytes(storageRef, file);
 
   let successCount = 0;
   let skippedCount = 0;

@@ -154,7 +154,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
   ];
 
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "100%", height: "110%", minHeight: 0 }}>
       <Table
         columns={columns}
         dataSource={bookings}
@@ -166,7 +166,7 @@ const BookingsList: React.FC<BookingsListProps> = ({
           width: "100%",
         }}
         scroll={{
-          y: "46vh",
+          y: "44vh",
           x: "max-content",
         }}
         pagination={{

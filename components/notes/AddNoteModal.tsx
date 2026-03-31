@@ -57,6 +57,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
       fileName.endsWith(".html")
     );
   };
+  const isWithinFileSizeLimit = (file: File) => file.size / 1024 / 1024 <= 10;
 
   const fetchTopics = async () => {
     try {
@@ -378,6 +379,20 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
               beforeUpload={(file) => {
                 if (!isSupportedNoteFile(file)) {
                   const errorMessage = "Only PDF or HTML files are supported.";
+                  setFileList([]);
+                  setFileValidationError(errorMessage);
+                  form.setFields([
+                    {
+                      name: "file",
+                      errors: [errorMessage],
+                    },
+                  ]);
+                  message.error(errorMessage);
+                  return Upload.LIST_IGNORE;
+                }
+                if (!isWithinFileSizeLimit(file)) {
+                  const errorMessage = "File size should not exceed 10 MB.";
+                  setFileList([]);
                   setFileValidationError(errorMessage);
                   form.setFields([
                     {

@@ -24,6 +24,7 @@ import SuccessAlert from "@/components/alerts/SuccessAlert";
 import ErrorAlert from "@/components/alerts/ErrorAlert";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
+const ITEMS_PER_PAGE = 12;
 
 const manageMentor = () => {
   const router = useRouter();
@@ -43,6 +44,12 @@ const manageMentor = () => {
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedMentors, setReorderedMentors] = useState<any[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalMentorPages = Math.max(1, Math.ceil(mentorList.length / ITEMS_PER_PAGE));
+  const paginatedMentors = mentorList.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   // Draggable Mentor Card Component
   const DraggableMentorCard = ({ mentor, index, moveMentor, isReordering }: any) => {
@@ -105,6 +112,7 @@ const manageMentor = () => {
 
       if (!result || result.data.length === 0) {
         setMentorList([]);
+        setCurrentPage(1);
         return;
       }
 
@@ -128,6 +136,12 @@ const manageMentor = () => {
   useEffect(() => {
     fetchMentors();
   }, []);
+
+  useEffect(() => {
+    if (currentPage > totalMentorPages) {
+      setCurrentPage(totalMentorPages);
+    }
+  }, [currentPage, totalMentorPages]);
 
   useEffect(() => {
     const currentView = searchParams.get("view");
@@ -470,17 +484,32 @@ const manageMentor = () => {
                       </div>
                     </div>
                   ) : (
-                    (isReordering ? reorderedMentors : mentorList).map((mentor, index) => (
+                    (isReordering ? reorderedMentors : paginatedMentors).map((mentor, index) => (
                       <DraggableMentorCard
                         key={mentor.id || index}
                         mentor={mentor}
-                        index={index}
+                        index={
+                          isReordering
+                            ? index
+                            : (currentPage - 1) * ITEMS_PER_PAGE + index
+                        }
                         moveMentor={moveMentor}
                         isReordering={isReordering}
                       />
                     ))
                   )}
                 </div>
+                {!isReordering && mentorList.length > ITEMS_PER_PAGE && (
+                  <div className="mt-6 flex justify-end">
+                    <Pagination
+                      current={currentPage}
+                      pageSize={ITEMS_PER_PAGE}
+                      total={mentorList.length}
+                      onChange={setCurrentPage}
+                      showSizeChanger={false}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </DndProvider>

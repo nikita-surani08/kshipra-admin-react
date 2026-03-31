@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, Form, Select, Button, Col, Row, Upload, Spin } from "antd";
 import { Work_Sans } from "next/font/google";
-import { getTopics, createTopic } from "@/service/api/config.api";
+import { getTopics } from "@/service/api/config.api";
 import { InboxOutlined } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 import Image from "next/image";
@@ -32,6 +32,8 @@ interface UploadFlashCardModalProps {
   onSave: (values: any) => void;
   subjects: Subject[];
   topics: Topic[];
+  defaultSubject?: string | null;
+  defaultTopic?: string | null;
   loading?: boolean;
 }
 
@@ -40,13 +42,14 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
   onCancel,
   onSave,
   subjects,
+  defaultSubject = null,
+  defaultTopic = null,
   loading = false,
 }) => {
   const [form] = Form.useForm();
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
   const [topic, setTopic] = useState<any>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [searchValue, setSearchValue] = useState("");
   const [options, setOptions] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const buttonLoading = loading || isSubmitting;
@@ -67,49 +70,32 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
 
   useEffect(() => {
     const topicList = topic || [];
-    const filtered = topicList.filter((t: any) =>
-      (t.title || t.name || "").toLowerCase().includes(searchValue.toLowerCase())
-    );
-
-    const baseOptions = filtered.map((item: any) => ({
+    const baseOptions = topicList.map((item: any) => ({
       label: item.title || item.name || "Untitled Topic",
       value: item.document_id,
       topicId: item.document_id,
     }));
 
-    const exactMatch = topicList.some(
-      (t: any) => (t.title || t.name || "").toLowerCase() === searchValue.toLowerCase()
-    );
+    setOptions(baseOptions);
+  }, [topic]);
 
-    if (searchValue && !exactMatch) {
-      baseOptions.push({
-        label: `Add "${searchValue}"`,
-        value: `NEW:${searchValue}`,
-        topicId: `NEW:${searchValue}`,
+  useEffect(() => {
+    if (visible) {
+      form.resetFields();
+      setSelectedSubject(defaultSubject);
+      setFileList([]);
+      form.setFieldsValue({
+        subject: defaultSubject || undefined,
+        topic: defaultTopic || undefined,
+        file: undefined,
       });
     }
-
-    setOptions(baseOptions);
-  }, [topic, searchValue]);
+  }, [visible, defaultSubject, defaultTopic, form]);
 
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       const values = await form.validateFields();
-
-      // Handle Topic Creation if needed
-      if (values.topic && values.topic.startsWith("NEW:")) {
-        const newTopicName = values.topic.substring(4);
-        try {
-          // Create the new topic
-          const newTopic = await createTopic(values.subject, newTopicName);
-          values.topic = newTopic.document_id;
-          console.log(`Topic "${newTopicName}" created successfully`);
-        } catch (err) {
-          console.error("Error creating topic:", err);
-          return;
-        }
-      }
 
       const payload = {
         ...values,
@@ -188,13 +174,13 @@ const UploadFlashCardModal: React.FC<UploadFlashCardModalProps> = ({
               className={`font-medium text-[#1E4640] ${worksans.className}`}
             >
               <Select
-                placeholder="Select or Create Topic"
+                placeholder="Select Topic"
                 className="h-[45px] rounded-lg font-400"
-                showSearch
-                filterOption={false}
-                onSearch={setSearchValue}
                 options={options}
                 notFoundContent={null}
+                onChange={(value) => {
+                  form.setFieldsValue({ topic: value });
+                }}
               />
             </Form.Item>
           </Col>

@@ -175,7 +175,7 @@ const ManageBookings = () => {
   };
 
   return (
-    <div className={`flex flex-col px-6 py-4 bg-[#F5F6F7] h-full ${worksans.className}`}>
+    <div className={`flex h-full min-h-0 flex-col bg-[#F5F6F7] px-6 py-4 ${worksans.className}`}>
       {successMessage && (
         <SuccessAlert
           message={successMessage}
@@ -191,7 +191,7 @@ const ManageBookings = () => {
         />
       )}
       {/* Header Section */}
-      <div className="h-[12%] w-full items-center justify-center flex ">
+      <div className="flex w-full flex-shrink-0 items-center justify-center pb-4">
         <div className="flex justify-between w-full items-center">
           <div className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}>
             Booking List
@@ -214,9 +214,9 @@ const ManageBookings = () => {
       </div>
 
       {/* Main Content Box */}
-      <div className={`h-[88%] w-full flex flex-col bg-white rounded-3xl overflow-hidden ${worksans.className}`}>
+      <div className={`flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-3xl bg-white ${worksans.className}`}>
         {/* Total Bookings Count Area */}
-        <div className="w-full flex-shrink-0 px-6 py-5 mt-3">
+        <div className="w-full flex-shrink-0 px-6 pb-4 pt-5">
           <div className="flex justify-between items-center">
             <div
               className={`text-[#1E4640] ${worksans.className} font-semibold text-2xl`}
@@ -244,7 +244,7 @@ const ManageBookings = () => {
         </div>
 
         {/* Bookings List Table or No Content */}
-        <div className="h-full flex-1 min-h-0 w-full flex bg-white px-4 pt-4 pb-6 overflow-hidden">
+        <div className="flex min-h-0 w-full flex-1 overflow-hidden bg-white px-4 pb-2 pt-2">
           {bookingsData.length === 0 && !loading ? (
             <div className="flex flex-col items-center justify-center w-full h-full">
               <Image

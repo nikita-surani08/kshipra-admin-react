@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { useEffect, useState } from "react";
+import { Pagination } from "antd";
 import dayjs from "dayjs";
 import { DragOutlined, LeftOutlined } from "@ant-design/icons";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -16,6 +17,7 @@ import SuccessAlert from "@/components/alerts/SuccessAlert";
 import ErrorAlert from "@/components/alerts/ErrorAlert";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
+const ITEMS_PER_PAGE = 12;
 
 const managePastSession = () => {
   const router = useRouter();
@@ -35,6 +37,12 @@ const managePastSession = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccessAlertOpen, setIsSuccessAlertOpen] = useState(false);
   const [isErrorAlertOpen, setIsErrorAlertOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalSessionPages = Math.max(1, Math.ceil(displaySessions.length / ITEMS_PER_PAGE));
+  const paginatedSessions = displaySessions.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -123,6 +131,12 @@ const managePastSession = () => {
     });
     setDisplaySessions(mapped);
   }, [sessionList, searchQuery]);
+
+  useEffect(() => {
+    if (currentPage > totalSessionPages) {
+      setCurrentPage(totalSessionPages);
+    }
+  }, [currentPage, totalSessionPages]);
 
   const handleToggle = async (sessionId: string, newType: "free" | "premium") => {
     try {
@@ -409,7 +423,7 @@ const managePastSession = () => {
                     </div>
                   </div>
                 ) : (
-                  displaySessions.map((session, index) => (
+                  paginatedSessions.map((session, index) => (
                     <PastSessionCard
                       key={session.id || index}
                       name={session.name}
@@ -436,6 +450,17 @@ const managePastSession = () => {
                   ))
                 )}
               </div>
+              {displaySessions.length > ITEMS_PER_PAGE && (
+                <div className="mt-6 flex justify-end">
+                  <Pagination
+                    current={currentPage}
+                    pageSize={ITEMS_PER_PAGE}
+                    total={displaySessions.length}
+                    onChange={setCurrentPage}
+                    showSizeChanger={false}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ) : (

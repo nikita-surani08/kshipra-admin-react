@@ -64,6 +64,10 @@ interface AddFlashCardModalProps {
 
   topics: Topic[];
 
+  defaultSubject?: string | null;
+
+  defaultTopic?: string | null;
+
   loading?: boolean;
 
 }
@@ -79,6 +83,10 @@ const AddFlashCardModal: React.FC<AddFlashCardModalProps> = ({
   onSave,
 
   subjects,
+
+  defaultSubject = null,
+
+  defaultTopic = null,
 
   loading = false,
 
@@ -428,9 +436,9 @@ const AddFlashCardModal: React.FC<AddFlashCardModalProps> = ({
 
       form.resetFields();
 
-      setSelectedSubject(null);
+      setSelectedSubject(defaultSubject);
 
-      setSelectedTopic(null);
+      setSelectedTopic(defaultTopic);
 
       setTopic([]);
 
@@ -452,9 +460,17 @@ const AddFlashCardModal: React.FC<AddFlashCardModalProps> = ({
 
       setSearchNoteValue("");
 
+      form.setFieldsValue({
+
+        subject: defaultSubject || undefined,
+
+        topic: defaultTopic || undefined,
+
+      });
+
     }
 
-  }, [visible]);
+  }, [visible, defaultSubject, defaultTopic, form]);
 
 
 
