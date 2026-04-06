@@ -13,6 +13,7 @@ import LiveSessionCard from "./LiveSessionCard";
 import ReorderLiveSessionModal from "./ReorderLiveSessionModal";
 import { addSession, getSessions, updateSession, deleteSession, updateSessionOrders } from "../../service/api/liveSession.api";
 import { LiveSession } from "../../service/api/liveSession.api";
+import { deleteImageFromS3 } from "@/service/api/config.api";
 import SuccessAlert from "@/components/alerts/SuccessAlert";
 import ErrorAlert from "@/components/alerts/ErrorAlert";
 
@@ -193,11 +194,25 @@ const ManageLiveSession = () => {
         updatedAt: new Date().toISOString(),
         order: selectedSession && selectedSession.id ? selectedSession.order : nextOrder,
       };
+      const previousBannerUrl = selectedSession?.banner_url || "";
 
       let result: LiveSession;
       if (selectedSession && selectedSession.id) {
         // Update existing session
         result = await updateSession(selectedSession.id, sessionData as Partial<LiveSession>);
+
+        if (
+          values.bannerFile &&
+          previousBannerUrl &&
+          previousBannerUrl !== sessionData.banner_url
+        ) {
+          try {
+            await deleteImageFromS3(previousBannerUrl);
+          } catch (deleteError) {
+            console.error("Error deleting old live session banner:", deleteError);
+          }
+        }
+
         // Update the session in the list
         setSessionList(prev => prev.map(session => 
           session.id === selectedSession.id ? { ...session, ...sessionData, id: selectedSession.id } : session

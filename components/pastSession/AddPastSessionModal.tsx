@@ -4,9 +4,7 @@ import Image from "next/image";
 import { Input, Button, Form, Select, DatePicker } from "antd";
 import { Work_Sans } from "next/font/google";
 import styles from "./pastSession.module.css";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../../service/config/firebase.config";
-// import { handleImageUploadWithPresignedUrl } from "@/service/api/config.api";
+import { handleImageUpload } from "@/service/api/config.api";
 
 const worksans = Work_Sans({ weight: ["400", "500", "600", "700"] });
 
@@ -136,15 +134,7 @@ const AddPastSessionModal: React.FC<AddPastSessionModalProps> = ({
 
       if (bannerFile) {
         try {
-          const storageRef = ref(
-            storage,
-            `uploads/sessions/${Date.now()}_${bannerFile.name}`,
-          );
-          const snapshot = await uploadBytes(storageRef, bannerFile);
-          bannerUrl = await getDownloadURL(snapshot.ref);
-
-          // Once the AWS presigned upload issue is resolved, replace the 4 lines above with:
-          // bannerUrl = await handleImageUploadWithPresignedUrl(bannerFile, "images");
+          bannerUrl = await handleImageUpload(bannerFile, "past-session");
           console.log("Banner uploaded:", bannerUrl);
         } catch (error) {
           console.error("Error uploading banner:", error);

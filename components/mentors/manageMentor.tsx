@@ -19,7 +19,7 @@ import {
   deleteMentor,
   updateMentorOrders,
 } from "@/service/api/mentor.api";
-import { handleImageUpload, handleImageUploadWithPresignedUrl } from "@/service/api/config.api";
+import { deleteImageFromS3, handleImageUpload } from "@/service/api/config.api";
 import SuccessAlert from "@/components/alerts/SuccessAlert";
 import ErrorAlert from "@/components/alerts/ErrorAlert";
 
@@ -183,15 +183,13 @@ const manageMentor = () => {
       setLoading(true);
 
       let imageUrl = values.image || null;
+      const previousImageUrl = selectedMentor?.image || null;
       console.log("Initial imageUrl from values:", imageUrl);
       console.log("ImageFile present?:", !!values.imageFile);
 
       if (values.imageFile) {
-        imageUrl = await handleImageUpload(values.imageFile);
+        imageUrl = await handleImageUpload(values.imageFile, "mentors");
         console.log("Uploaded new image:", imageUrl);
-
-        // Once the AWS presigned upload issue is resolved, replace the line above with:
-        // imageUrl = await handleImageUploadWithPresignedUrl(values.imageFile, "images");
       }
       console.log("Final imageUrl to save:", imageUrl);
 
@@ -209,6 +207,19 @@ const manageMentor = () => {
 
       if (selectedMentor) {
         await updateMentor(selectedMentor.id, mentorData);
+
+        if (
+          values.imageFile &&
+          previousImageUrl &&
+          previousImageUrl !== imageUrl
+        ) {
+          try {
+            await deleteImageFromS3(previousImageUrl);
+          } catch (deleteError) {
+            console.error("Error deleting old mentor image:", deleteError);
+          }
+        }
+
         setSuccessMessage("Updated mentor details successfully.");
       } else {
         await addMentor(mentorData);

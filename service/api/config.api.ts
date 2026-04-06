@@ -17,6 +17,9 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 const S3_PRESIGN_ENDPOINT =
   process.env.NEXT_PUBLIC_S3_PRESIGN_URL ??
   "https://gets3presignedurl-e5pwqbt5lq-uc.a.run.app";
+const S3_DELETE_ENDPOINT =
+  process.env.NEXT_PUBLIC_S3_DELETE_URL ??
+  "https://deletes3object-e5pwqbt5lq-uc.a.run.app";
 
 interface PresignedUploadResponse {
   preSignedUrl: string;
@@ -80,35 +83,17 @@ export const handleUpload = async (
 
 export const handleImageUpload = async (
   file: File,
-  folderName: string = "mentors"
+  resourceType: string = "images"
 ) => {
-  const storage = getStorage();
-
-  // Get original filename and extension
-  const originalName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
-  const fileExtension = file.name.split(".").pop()?.toLowerCase();
-
-  // Create a unique filename with original name and timestamp
-  const timestamp = Date.now();
-  const newFileName = `${originalName}.${fileExtension}`;
-  // Restore cleaner filename logic if desired, or keep unique.
-  // Staying consistent with previous iterations, I'll use the unique timestamp one if that was working,
-  // but standard practice is often just name+ext or uuid.
-  // Let's use the unique one to avoid conflicts.
-  const uniqueFileName = `${originalName}_${timestamp}.${fileExtension}`;
-
-  // Create storage reference with the new filename
-  const storageRef = ref(storage, `uploads/${folderName}/${uniqueFileName}`);
-
   try {
-    // Check if the file is an image
-    if (!file.type.startsWith("image/")) {
-      throw new Error("Only image files are allowed");
-    }
+    const { preSignedUrl, outPutUrl } = await getImageUploadPresignedUrl(
+      file,
+      resourceType
+    );
 
-    const snapshot = await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    return downloadURL;
+    await uploadImageToPresignedUrl(file, preSignedUrl);
+
+    return outPutUrl;
   } catch (error) {
     console.error("Error uploading image:", error);
     throw error;
@@ -151,7 +136,6 @@ export const getImageUploadPresignedUrl = async (
 
   const presignData =
     (await presignResponse.json()) as Partial<PresignedUploadResponse>;
-    (await presignResponse.json()) as Partial<PresignedUploadResponse>;
 
   if (!presignData.preSignedUrl || !presignData.outPutUrl) {
     throw new Error("Invalid image upload response");
@@ -188,19 +172,27 @@ export const handleImageUploadWithPresignedUrl = async (
   file: File,
   resourceType: string = "images"
 ) => {
-  try {
-    const { preSignedUrl, outPutUrl } = await getImageUploadPresignedUrl(
-      file,
-      resourceType
-    );
+  return handleImageUpload(file, resourceType);
+};
 
-    await uploadImageToPresignedUrl(file, preSignedUrl);
-
-    return outPutUrl;
-  } catch (error) {
-    console.error("Error uploading image with presigned URL:", error);
-    throw error;
+export const deleteImageFromS3 = async (fileUrl: string) => {
+  if (!fileUrl) {
+    return false;
   }
+
+  const deleteResponse = await fetch(S3_DELETE_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fileUrl }),
+  });
+
+  if (!deleteResponse.ok) {
+    throw new Error("Failed to delete old image");
+  }
+
+  return true;
 };
 
 export const getSubjects = async () => {

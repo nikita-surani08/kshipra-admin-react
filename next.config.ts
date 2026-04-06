@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "firebasestorage.googleapis.com",
       },
+      {
+        protocol: "https",
+        hostname: "kshipra-content.s3.ap-south-2.amazonaws.com",
+      },
     ],
   },
 };
