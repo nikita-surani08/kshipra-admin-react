@@ -116,7 +116,18 @@ const AddMentor: React.FC<AddMentorProps> = ({ onCancel, onSave, initialValues, 
   };
 
   const handleAddSessionCard = (data: SessionCardData) => {
-    setSessionCards([...sessionCards, data]);
+    setSessionCards(prevCards => {
+      const existingIndex = prevCards.findIndex(card => card.duration === data.duration);
+      if (existingIndex !== -1) {
+        // Update existing card
+        const updatedCards = [...prevCards];
+        updatedCards[existingIndex] = data;
+        return updatedCards;
+      } else {
+        // Add new card
+        return [...prevCards, data];
+      }
+    });
     setIsSessionModalOpen(false);
   };
 
