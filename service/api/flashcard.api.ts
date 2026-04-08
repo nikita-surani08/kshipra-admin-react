@@ -15,6 +15,7 @@ import {
   runTransaction,
   writeBatch,
   increment,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "../config/firebase.config";
 import { getStorage, ref, uploadBytes } from "firebase/storage";
@@ -250,41 +251,65 @@ export const uploadFlashcardsFromExcel = async (
     throw new Error("No data rows found in the uploaded Excel sheet.");
   }
 
-  const notesSnapshot = await getDocs(
-    query(
+  // Collect unique note titles from the CSV
+  const uniqueNoteTitles = new Set<string>();
+  for (const row of dataRows) {
+    const noteTitle = normalize(row[noteTitleIndex]);
+    if (noteTitle) {
+      uniqueNoteTitles.add(noteTitle);
+    }
+  }
+
+  // Check existing notes and create missing ones
+  const noteMap = new Map<string, { id: string; title: string }>();
+  const notesToCreate: string[] = [];
+
+  for (const noteTitle of uniqueNoteTitles) {
+    const existingNoteQuery = query(
       collection(db, "notes"),
       where("subject_id", "==", subjectId),
       where("topic_id", "==", topicId),
+      where("title", "==", noteTitle),
       where("is_active", "==", true)
-    )
-  );
-
-  console.log("Fetching notes for subject:", subjectId, "topic:", topicId);
-  console.log("Found notes count:", notesSnapshot.size);
-
-  if (notesSnapshot.empty) {
-    throw new Error(
-      "Please create notes first before uploading flashcards."
     );
+    const existingNoteSnap = await getDocs(existingNoteQuery);
+
+    if (!existingNoteSnap.empty) {
+      // Note exists, use it
+      const noteDoc = existingNoteSnap.docs[0];
+      const data = noteDoc.data() as { title?: string };
+      noteMap.set(normalizeKey(noteTitle), {
+        id: noteDoc.id,
+        title: noteTitle,
+      });
+    } else {
+      // Note doesn't exist, mark for creation
+      notesToCreate.push(noteTitle);
+    }
   }
 
-  const noteMap = new Map<string, { id: string; title: string }>();
-  notesSnapshot.forEach((noteDoc) => {
-    const data = noteDoc.data() as { title?: string };
-    const normalizedTitle = normalize(data.title);
-    console.log("Note found:", {
-      id: noteDoc.id,
-      originalTitle: data.title,
-      normalizedTitle: normalizedTitle,
-      normalizedKey: normalizeKey(normalizedTitle)
+  // Create missing notes
+  for (const noteTitle of notesToCreate) {
+    const nowIso = new Date().toISOString();
+    const noteDocRef = doc(collection(db, "notes"));
+    await setDoc(noteDocRef, {
+      subject_id: subjectId,
+      topic_id: topicId,
+      title: noteTitle,
+      pdf_url: "",
+      html_url: "",
+      order: 1, // Default order
+      is_active: true,
+      total_flashcards: 0,
+      created_at: nowIso,
+      updated_at: nowIso,
+      document_id: noteDocRef.id,
     });
-    noteMap.set(normalizeKey(normalizedTitle), {
-      id: noteDoc.id,
-      title: normalizedTitle,
+    noteMap.set(normalizeKey(noteTitle), {
+      id: noteDocRef.id,
+      title: noteTitle,
     });
-  });
-
-  console.log("Note map keys:", Array.from(noteMap.keys()));
+  }
 
   const storage = getStorage();
   const timestamp = Date.now();
@@ -396,10 +421,14 @@ export const uploadFlashcardsFromExcel = async (
 
     if (successCount > 0) {
       const topicRef = doc(db, "topics", topicId);
-      metaBatch.update(topicRef, {
+      const topicUpdates: any = {
         total_flashcards: increment(successCount),
         updated_at: nowIso,
-      });
+      };
+      if (notesToCreate.length > 0) {
+        topicUpdates.total_notes = increment(notesToCreate.length);
+      }
+      metaBatch.update(topicRef, topicUpdates);
       metaOps += 1;
     }
 
