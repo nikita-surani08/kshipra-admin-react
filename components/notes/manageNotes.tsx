@@ -249,6 +249,7 @@ const ManageNotes = () => {
       title: values.title,
       pdf_url: values.pdf_url,
       html_url: values.html_url,
+      isPremium: values.isPremium ?? false,
     };
 
     try {

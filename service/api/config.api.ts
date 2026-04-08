@@ -330,7 +330,7 @@ export const createTopic = async (subjectId: string, name: string) => {
     const topicsRef = collection(db, "topics");
     const subjectRef = doc(db, "subjects", subjectId);
 
-    // 🔎 Check for existing topic only under this subject
+    // 🔎 Check for existing topic ONLY under this subject
     const q = query(
       topicsRef,
       where("subject_id", "==", subjectId),

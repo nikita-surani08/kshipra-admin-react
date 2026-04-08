@@ -105,6 +105,10 @@ const AddFlashCardModal: React.FC<AddFlashCardModalProps> = ({
 
   const [noteOptions, setNoteOptions] = useState<any[]>([]);
 
+  const [isCreatingNewNote, setIsCreatingNewNote] = useState(false);
+
+  const [noteType, setNoteType] = useState<'free' | 'premium'>('free');
+
   const fetchTopics = async () => {
     try {
       const topics = await getTopics(selectedSubject);
@@ -307,6 +311,10 @@ const AddFlashCardModal: React.FC<AddFlashCardModalProps> = ({
 
       setSearchNoteValue("");
 
+      setIsCreatingNewNote(false);
+
+      setNoteType('free');
+
       form.setFieldsValue({
         subject: defaultSubject || undefined,
 
@@ -344,7 +352,8 @@ const AddFlashCardModal: React.FC<AddFlashCardModalProps> = ({
 
               title: newNoteTitle,
 
-              pdf_url: "", // Placeholder or handle as needed
+              pdf_url: "",
+              isPremium: noteType === 'premium',
             });
 
             noteId = newNote.document_id;
@@ -442,11 +451,45 @@ const AddFlashCardModal: React.FC<AddFlashCardModalProps> = ({
                 onPopupScroll={handlePopupScroll}
                 options={noteOptions}
                 notFoundContent={loadingDropdown ? <Spin size="small" /> : null}
-                onChange={(value) => setSelectedNote(value)}
+                onChange={(value) => {
+                  setSelectedNote(value);
+                  setIsCreatingNewNote(value && value.startsWith("NEW:"));
+                }}
               />
             </Form.Item>
           </Col>
         </Row>
+
+        {isCreatingNewNote && (
+          <Form.Item
+            name="isPremium"
+            label="Note Type"
+            className={`font-medium text-[#1E4640] ${worksans.className}`}
+          >
+            <div className="flex">
+              <button
+                className={`px-4 py-2 rounded-l-lg text-sm font-medium transition-all border border-[#1E4640] ${
+                  noteType === "free"
+                    ? "bg-[#1E4640] text-white"
+                    : " text-gray-600 hover:bg-white"
+                }`}
+                onClick={() => setNoteType("free")}
+              >
+                Free
+              </button>
+              <button
+                className={`px-4 py-2 rounded-r-lg text-sm font-medium transition-all border border-[#1E4640] ${
+                  noteType === "premium"
+                    ? "bg-[#1E4640] text-white"
+                    : " text-gray-600 hover:bg-white"
+                }`}
+                onClick={() => setNoteType("premium")}
+              >
+                Premium
+              </button>
+            </div>
+          </Form.Item>
+        )}
 
         <Form.Item
           name="questionTitle"

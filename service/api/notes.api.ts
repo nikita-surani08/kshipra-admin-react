@@ -79,6 +79,7 @@ export interface Note {
   created_at: string;
   document_id: string;
   is_active: boolean;
+  isPremium: boolean;
   order: number;
   pdf_url: string;
   html_url?: string;
@@ -108,6 +109,7 @@ export const addNote = async (noteData: any) => {
       html_url: noteData.html_url ?? null, // Firebase accepts null, but not undefined
       order: noteData.order || 1,
       is_active: true,
+      isPremium: noteData.isPremium ?? false,
       total_flashcards: 0,
       created_at: nowIso,
       updated_at: nowIso,

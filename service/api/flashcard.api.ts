@@ -228,7 +228,7 @@ export const uploadFlashcardsFromExcel = async (
   
   if (!hasNoteTitle || !hasQuestion || !hasAnswer) {
     throw new Error(
-      'Invalid Excel template. Use headers such as: Question, Answer, Question title, Answer title, Note title, Tag. Columns can be in any order, but "Question", "Answer", and "Note title" are required.'
+      'Invalid Excel template. Use headers such as: Question, Answer, Question title, Answer title, Note title, Is premium, Tag. Columns can be in any order, but "Question", "Answer", and "Note title" are required.'
     );
   }
   
@@ -238,6 +238,7 @@ export const uploadFlashcardsFromExcel = async (
   const questionIndex = headerRow.indexOf("question");
   const answerTitleIndex = headerRow.indexOf("answer title");
   const answerIndex = headerRow.indexOf("answer");
+  const isPremiumIndex = Math.max(headerRow.indexOf("is premium"), headerRow.indexOf("ispremium"));
   const tagIndex = headerRow.indexOf("tag");
 
   const dataRows = rows
@@ -251,18 +252,34 @@ export const uploadFlashcardsFromExcel = async (
     throw new Error("No data rows found in the uploaded Excel sheet.");
   }
 
-  // Collect unique note titles from the CSV
-  const uniqueNoteTitles = new Set<string>();
+  // Collect unique note titles and their isPremium status from the CSV
+  const notePremiumMap = new Map<string, boolean>();
   for (const row of dataRows) {
     const noteTitle = normalize(row[noteTitleIndex]);
     if (noteTitle) {
-      uniqueNoteTitles.add(noteTitle);
+      const isPremiumValue = isPremiumIndex >= 0 ? normalize(row[isPremiumIndex]).toLowerCase() : "";
+      // Support various representations of true: "yes", "true", "1", "y", "t"
+      const isPremium = 
+        isPremiumValue === "yes" || 
+        isPremiumValue === "true" || 
+        isPremiumValue === "y" || 
+        isPremiumValue === "t" || 
+        isPremiumValue === "1";
+      // If already set to true, keep it true; otherwise set based on current row
+      if (!notePremiumMap.has(noteTitle) || !notePremiumMap.get(noteTitle)) {
+        notePremiumMap.set(noteTitle, isPremium);
+      }
     }
   }
 
+  const uniqueNoteTitles = Array.from(notePremiumMap.keys());
+
   // Check existing notes and create missing ones
-  const noteMap = new Map<string, { id: string; title: string }>();
-  const notesToCreate: string[] = [];
+  // Strategy:
+  // - If note exists: Reuse the existing isPremium value (do NOT update it from CSV)
+  // - If note is new: Use isPremium value from CSV
+  const noteMap = new Map<string, { id: string; title: string; isPremium: boolean }>();
+  const notesToCreate: { title: string; isPremium: boolean }[] = [];
 
   for (const noteTitle of uniqueNoteTitles) {
     const existingNoteQuery = query(
@@ -275,21 +292,23 @@ export const uploadFlashcardsFromExcel = async (
     const existingNoteSnap = await getDocs(existingNoteQuery);
 
     if (!existingNoteSnap.empty) {
-      // Note exists, use it
+      // Note already exists - preserve existing isPremium value (do not override)
       const noteDoc = existingNoteSnap.docs[0];
-      const data = noteDoc.data() as { title?: string };
+      const data = noteDoc.data() as { title?: string; isPremium?: boolean };
       noteMap.set(normalizeKey(noteTitle), {
         id: noteDoc.id,
         title: noteTitle,
+        isPremium: data.isPremium ?? false,  // Reuse existing isPremium
       });
     } else {
-      // Note doesn't exist, mark for creation
-      notesToCreate.push(noteTitle);
+      // Note is new - add to creation queue with isPremium from CSV
+      const isPremium = notePremiumMap.get(noteTitle) ?? false;
+      notesToCreate.push({ title: noteTitle, isPremium });
     }
   }
 
-  // Create missing notes
-  for (const noteTitle of notesToCreate) {
+  // Create missing notes with isPremium from CSV
+  for (const { title: noteTitle, isPremium } of notesToCreate) {
     const nowIso = new Date().toISOString();
     const noteDocRef = doc(collection(db, "notes"));
     await setDoc(noteDocRef, {
@@ -300,6 +319,7 @@ export const uploadFlashcardsFromExcel = async (
       html_url: "",
       order: 1, // Default order
       is_active: true,
+      isPremium,
       total_flashcards: 0,
       created_at: nowIso,
       updated_at: nowIso,
@@ -308,6 +328,7 @@ export const uploadFlashcardsFromExcel = async (
     noteMap.set(normalizeKey(noteTitle), {
       id: noteDocRef.id,
       title: noteTitle,
+      isPremium,
     });
   }
 

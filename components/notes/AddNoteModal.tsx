@@ -45,6 +45,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
   const [searchValue, setSearchValue] = useState("");
   const [options, setOptions] = useState<any[]>([]);
   const [fileValidationError, setFileValidationError] = useState("");
+  const [noteType, setNoteType] = useState<'free' | 'premium'>('free');
   const buttonLoading = Boolean(loading || isUploading || isSubmitting);
   const isSaveDisabled = buttonLoading || Boolean(fileValidationError);
 
@@ -120,6 +121,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
       setFileList([]);
       setCurrentFileUrl("");
       setFileValidationError("");
+      setNoteType('free');
     }
   }, [visible]);
 
@@ -241,6 +243,7 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         html_url: htmlUrl,
         order: 1,
         is_active: true,
+        isPremium: noteType === 'premium',
         total_flashcards: 0,
       };
 
@@ -327,6 +330,35 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
               fontWeight: 400,
             }}
           />
+        </Form.Item>
+
+        <Form.Item
+          name="isPremium"
+          label="Note Type"
+          className={`font-medium text-[#1E4640] ${worksans.className}`}
+        >
+          <div className="flex">
+            <button
+              className={`px-4 py-2 rounded-l-lg text-sm font-medium transition-all border border-[#1E4640] ${
+                noteType === "free"
+                  ? "bg-[#1E4640] text-white"
+                  : " text-gray-600 hover:bg-white"
+              }`}
+              onClick={() => setNoteType("free")}
+            >
+              Free
+            </button>
+            <button
+              className={`px-4 py-2 rounded-r-lg text-sm font-medium transition-all border border-[#1E4640] ${
+                noteType === "premium"
+                  ? "bg-[#1E4640] text-white"
+                  : " text-gray-600 hover:bg-white"
+              }`}
+              onClick={() => setNoteType("premium")}
+            >
+              Premium
+            </button>
+          </div>
         </Form.Item>
 
         {/* FILE UPLOAD */}
