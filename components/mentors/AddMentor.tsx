@@ -19,11 +19,27 @@ interface SessionCardData {
 interface AddMentorProps {
   onCancel: () => void;
   onSave?: (data: any) => void;
+  onScheduleSave?: (schedule: any[]) => Promise<void> | void;
   initialValues?: any;
   loading?: boolean;
 }
 
-const AddMentor: React.FC<AddMentorProps> = ({ onCancel, onSave, initialValues, loading }) => {
+const cloneSchedule = (schedule: any[] = []) =>
+  schedule.map((day) => ({
+    ...day,
+    timeSlots: Array.isArray(day?.timeSlots) ? [...day.timeSlots] : [],
+  }));
+
+const cloneSessionCards = (sessionCards: SessionCardData[] = []) =>
+  sessionCards.map((card) => ({ ...card }));
+
+const AddMentor: React.FC<AddMentorProps> = ({
+  onCancel,
+  onSave,
+  onScheduleSave,
+  initialValues,
+  loading,
+}) => {
   const [form] = Form.useForm();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -40,11 +56,28 @@ const AddMentor: React.FC<AddMentorProps> = ({ onCancel, onSave, initialValues, 
   useEffect(() => {
     if (initialValues) {
       form.setFieldsValue(initialValues);
-      if (initialValues.image) setPreview(initialValues.image);
-      if (initialValues.sessionCards) setSessionCards(initialValues.sessionCards);
-      if (initialValues.schedule) setScheduleData(initialValues.schedule);
-      if (initialValues.rank) setRankOptions(Array.isArray(initialValues.rank) ? initialValues.rank : [initialValues.rank]);
-      if (initialValues.expertise) setExpertiseOptions(Array.isArray(initialValues.expertise) ? initialValues.expertise : [initialValues.expertise]);
+      setPreview(initialValues.image || null);
+      setImageFile(null);
+      setSessionCards(
+        cloneSessionCards(initialValues.sessionCards || initialValues.sessionCard || [])
+      );
+      setScheduleData(cloneSchedule(initialValues.schedule || []));
+      setRankOptions(
+        Array.isArray(initialValues.rank)
+          ? [...initialValues.rank]
+          : initialValues.rank
+            ? [initialValues.rank]
+            : []
+      );
+      setExpertiseOptions(
+        Array.isArray(initialValues.expertise)
+          ? [...initialValues.expertise]
+          : initialValues.expertise
+            ? [initialValues.expertise]
+            : []
+      );
+      setRankInputValue('');
+      setExpertiseInputValue('');
     } else {
       form.resetFields();
       setPreview(null);
@@ -137,10 +170,14 @@ const AddMentor: React.FC<AddMentorProps> = ({ onCancel, onSave, initialValues, 
     setSessionCards(newCards);
   };
 
-  const handleSaveSchedule = (data: any[]) => {
+  const handleSaveSchedule = async (data: any[]) => {
     console.log("Schedule Saved:", data);
     setScheduleData(data);
     setIsScheduleModalOpen(false);
+
+    if (initialValues?.id && onScheduleSave) {
+      await onScheduleSave(data);
+    }
   };
 
   const formatDuration = (minutes: number) => {
@@ -457,6 +494,7 @@ const AddMentor: React.FC<AddMentorProps> = ({ onCancel, onSave, initialValues, 
         open={isScheduleModalOpen}
         onCancel={() => setIsScheduleModalOpen(false)}
         onSave={handleSaveSchedule}
+        initialSchedule={scheduleData}
       />
     </div>
   );

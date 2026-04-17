@@ -16,6 +16,7 @@ import {
   addMentor,
   getMentors,
   updateMentor,
+  updateMentorSchedule,
   deleteMentor,
   updateMentorOrders,
 } from "@/service/api/mentor.api";
@@ -243,6 +244,52 @@ const manageMentor = () => {
     }
 
     fetchMentors();
+  };
+
+  const handleScheduleSave = async (schedule: any[]) => {
+    if (!selectedMentor?.id) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await updateMentorSchedule(selectedMentor.id, schedule);
+
+      setSelectedMentor((currentMentor: any) =>
+        currentMentor
+          ? {
+              ...currentMentor,
+              schedule,
+            }
+          : currentMentor
+      );
+
+      setMentorList((currentMentors) =>
+        currentMentors.map((mentor) =>
+          mentor.id === selectedMentor.id
+            ? {
+                ...mentor,
+                schedule,
+              }
+            : mentor
+        )
+      );
+
+      setSuccessMessage("Schedule updated successfully.");
+      setErrorMessage(null);
+      setIsSuccessAlertOpen(true);
+      setIsErrorAlertOpen(false);
+    } catch (error) {
+      console.error("Error saving mentor schedule:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to save mentor schedule.";
+      setErrorMessage(message);
+      setSuccessMessage(null);
+      setIsErrorAlertOpen(true);
+      setIsSuccessAlertOpen(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openAddView = () => {
@@ -526,9 +573,11 @@ const manageMentor = () => {
           </DndProvider>
         ) : (
           <AddMentor
+            key={selectedMentor?.id ?? "new-mentor"}
             initialValues={selectedMentor}
             onCancel={closeFormView}
             onSave={handleAddMentor}
+            onScheduleSave={handleScheduleSave}
             loading={loading}
           />
         )}

@@ -213,6 +213,23 @@ export const updateMentor = async (mentorId: string, updateData: any) => {
   }
 };
 
+export const updateMentorSchedule = async (
+  mentorId: string,
+  schedule: Schedule[] = []
+) => {
+  try {
+    const mentorRef = doc(db, "mentors", mentorId);
+    await updateDoc(mentorRef, {
+      schedule,
+      updatedAt: new Date().toISOString(),
+    });
+    return { id: mentorId, schedule };
+  } catch (error) {
+    console.error("Error updating mentor schedule:", error);
+    throw new Error("Failed to update mentor schedule");
+  }
+};
+
 // Soft delete a note and reorder remaining mentors
 export const deleteMentor = async (mentorId: string) => {
   try {
