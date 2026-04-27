@@ -176,9 +176,8 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
         } else if (url.toLowerCase().endsWith('.html')) {
           htmlUrl = url;
         } else {
-          // If can't determine, ask user to specify or default to one
-          message.error("Please specify whether this is a PDF or HTML link by including .pdf or .html in the URL");
-          return;
+          // If can't determine, default to PDF
+          pdfUrl = url;
         }
       } else {
         message.error("Please provide either a file or a link");

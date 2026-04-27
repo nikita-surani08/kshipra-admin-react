@@ -43,6 +43,7 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [currentFileUrl, setCurrentFileUrl] = useState<string | null>(null);
+  const [noteType, setNoteType] = useState<'free' | 'premium'>('free');
   const buttonLoading = Boolean(loading || isUploading);
 
   useEffect(() => {
@@ -69,6 +70,9 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
 
       console.log(note.pdf_url, "[][][][]this is done");
 
+      // Set note type from existing data
+      setNoteType(note.isPremium ? 'premium' : 'free');
+
       // Then set form values
       form.setFieldsValue({
         subject: note.subject_id || "",
@@ -92,8 +96,8 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
     try {
       const values = await form.validateFields();
 
-      let pdfUrl = "";
-      let htmlUrl = "";
+      let pdfUrl = note?.pdf_url || "";
+      let htmlUrl = note?.html_url || "";
 
       // Handle file upload
       if (fileList.length > 0 && fileList[0].originFileObj) {
@@ -111,8 +115,10 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
 
           if (isPdf) {
             pdfUrl = fileUrl;
+            htmlUrl = ""; // Clear HTML URL if uploading PDF
           } else if (isHtml) {
             htmlUrl = fileUrl;
+            pdfUrl = ""; // Clear PDF URL if uploading HTML
           } else {
             message.error("Unknown file type");
             return;
@@ -124,24 +130,19 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
         } finally {
           setIsUploading(false);
         }
-      } else if (currentFileUrl) {
-        // Keep the existing URL
-        // Determine if it's PDF or HTML based on URL extension or existing note data
+      } else if (currentFileUrl && currentFileUrl !== (note?.pdf_url || note?.html_url)) {
+        // Only update URL if it has changed
         const url = currentFileUrl.trim();
         if (url.toLowerCase().endsWith('.pdf')) {
           pdfUrl = url;
+          htmlUrl = "";
         } else if (url.toLowerCase().endsWith('.html')) {
           htmlUrl = url;
+          pdfUrl = "";
         } else {
-          // If can't determine from URL, check existing note data
-          if (note?.pdf_url && note.pdf_url === url) {
-            pdfUrl = url;
-          } else if (note?.html_url && note.html_url === url) {
-            htmlUrl = url;
-          } else {
-            message.error("Please specify whether this is a PDF or HTML link by including .pdf or .html in the URL");
-            return;
-          }
+          // Default to PDF if can't determine
+          pdfUrl = url;
+          htmlUrl = "";
         }
       }
 
@@ -151,6 +152,7 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
         title: values.title,
         pdf_url: pdfUrl,
         html_url: htmlUrl,
+        isPremium: noteType === 'premium',
       };
 
       onSave({ ...updatedValues, id: note?.document_id });
@@ -269,6 +271,37 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
               fontWeight: 400,
             }}
           />
+        </Form.Item>
+
+        <Form.Item
+          name="isPremium"
+          label="Note Type"
+          className={`font-medium text-[#1E4640] ${worksans.className}`}
+        >
+          <div className="flex">
+            <button
+              type="button"
+              className={`px-4 py-2 rounded-l-lg text-sm font-medium transition-all border border-[#1E4640] ${
+                noteType === "free"
+                  ? "bg-[#1E4640] text-white"
+                  : " text-gray-600 hover:bg-white"
+              }`}
+              onClick={() => setNoteType("free")}
+            >
+              Free
+            </button>
+            <button
+              type="button"
+              className={`px-4 py-2 rounded-r-lg text-sm font-medium transition-all border border-[#1E4640] ${
+                noteType === "premium"
+                  ? "bg-[#1E4640] text-white"
+                  : " text-gray-600 hover:bg-white"
+              }`}
+              onClick={() => setNoteType("premium")}
+            >
+              Premium
+            </button>
+          </div>
         </Form.Item>
 
         {/* FILE UPLOAD */}

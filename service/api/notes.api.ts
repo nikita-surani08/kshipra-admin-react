@@ -178,6 +178,7 @@ export const updateNote = async (noteId: string, updateData: any) => {
       title: updateData.title,
       pdf_url: updateData.pdf_url,
       html_url: updateData.html_url,
+      isPremium: updateData.isPremium ?? false,
       updated_at: new Date().toISOString(),
     });
 
