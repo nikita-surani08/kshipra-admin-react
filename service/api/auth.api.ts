@@ -1,26 +1,19 @@
 import {
   createUserWithEmailAndPassword,
   getAuth,
-  GoogleAuthProvider,
-  OAuthProvider,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
-  signInWithPopup,
   signOut,
+  type User,
 } from "firebase/auth";
 import {
-  addDoc,
   collection,
-  doc,
-  getDoc,
-  setDoc,
   query,
   where,
   getDocs,
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase.config";
-import { randomUUID } from "crypto";
 
 export const signInWithFirebase = async (
   email: string,
@@ -34,15 +27,17 @@ export const signInWithFirebase = async (
     );
     const idToken = await userCredential.user.getIdToken();
     return { success: true, idToken };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authError = error as { code?: string; message?: string };
     let errorMessage = "An error occurred during sign in";
 
-    switch (error.code) {
+    switch (authError.code) {
       case "auth/invalid-credential":
         errorMessage = "Invalid email or password";
         break;
       default:
-        errorMessage = error.message || "An error occurred during sign in";
+        errorMessage =
+          authError.message || "An error occurred during sign in";
     }
 
     return { success: false, message: errorMessage };
@@ -73,11 +68,33 @@ export const signUpWithFirebase = async (email: string, password: string) => {
 //   return { user, idToken };
 // };
 
-// export const forgotPasswordWithFirebase = async (
-//   email: string
-// ): Promise<any> => {
-//   await sendPasswordResetEmail(auth, email);
-// };
+export const forgotPasswordWithFirebase = async (
+  email: string
+): Promise<{ success: boolean; message?: string }> => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return {
+      success: true,
+      message: "Password reset link has been sent to your email.",
+    };
+  } catch (error: unknown) {
+    const authError = error as { code?: string; message?: string };
+    let errorMessage = "Failed to send password reset link.";
+
+    switch (authError.code) {
+      case "auth/invalid-email":
+        errorMessage = "Please enter a valid email address.";
+        break;
+      case "auth/user-not-found":
+        errorMessage = "No user found with this email address.";
+        break;
+      default:
+        errorMessage = authError.message || errorMessage;
+    }
+
+    return { success: false, message: errorMessage };
+  }
+};
 
 // export const loginWithGoogle = async () => {
 //   const provider = new GoogleAuthProvider();
@@ -123,7 +140,7 @@ export const isAdminExist = async (email: string) => {
   }
 };
 
-export const sendEmailVerificationToUser = async (user: any): Promise<void> => {
+export const sendEmailVerificationToUser = async (user: User): Promise<void> => {
   try {
     await sendEmailVerification(user);
   } catch (error) {
@@ -132,6 +149,6 @@ export const sendEmailVerificationToUser = async (user: any): Promise<void> => {
   }
 };
 
-export const checkEmailVerificationStatus = (user: any): boolean => {
+export const checkEmailVerificationStatus = (user: User | null): boolean => {
   return user?.emailVerified || false;
 };

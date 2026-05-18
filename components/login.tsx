@@ -1,12 +1,16 @@
 "use client";
 
-import { useContext, useEffect, useState } from "react";
+import { useState } from "react";
 import { Work_Sans } from "next/font/google";
 import Image from "next/image";
 import { IoMdEye } from "react-icons/io";
 import { IoMdEyeOff } from "react-icons/io";
 import { useRouter } from "next/navigation";
-import { signInWithFirebase, isAdminExist } from "@/service/api/auth.api";
+import {
+  forgotPasswordWithFirebase,
+  signInWithFirebase,
+  isAdminExist,
+} from "@/service/api/auth.api";
 import { useLoaderContext } from "@/context/loader";
 import Loader from "./loader";
 
@@ -17,19 +21,31 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const router = useRouter();
   const { isLoading, setIsLoading } = useLoaderContext();
+
+  const validateEmail = () => {
+    if (!email) {
+      setError("Please enter email");
+      return false;
+    }
+
+    if (!email.includes("@")) {
+      setError("Please enter valid email address");
+      return false;
+    }
+
+    return true;
+  };
 
   const handleSignIn = async () => {
     console.log("Sign In");
 
     setError("");
+    setSuccessMessage("");
 
-    if (!email) {
-      setError("Please enter email");
-      return;
-    } else if (!email.includes("@")) {
-      setError("Please enter valid email address");
+    if (!validateEmail()) {
       return;
     }
 
@@ -60,6 +76,40 @@ const Login = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError("");
+    setSuccessMessage("");
+
+    if (!validateEmail()) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const adminCheck = await isAdminExist(email);
+
+      if (!adminCheck.success) {
+        setError("Admin user not found.");
+        return;
+      }
+
+      const response = await forgotPasswordWithFirebase(email);
+
+      if (response.success) {
+        setSuccessMessage(
+          response.message || "Password reset link has been sent to your email."
+        );
+      } else {
+        setError(response.message || "Failed to send password reset link.");
+      }
+    } catch (error) {
+      console.error("Forgot password error:", error);
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -139,15 +189,28 @@ const Login = () => {
                 )}
               </button>
             </div>
+            <button
+              type="button"
+              className="self-end text-sm font-medium text-[#1E4640] hover:text-[#7DB4AB]"
+              onClick={handleForgotPassword}
+              disabled={isLoading}
+            >
+              Forgot password?
+            </button>
           </div>
-          <div
-            className="-mt-4 flex flex-col items-center justify-center gap-4"
-            onClick={handleSignIn}
-          >
-            <button className="bg-[#1E4640] w-[350px] text-white p-3 rounded-xl py-3 text-lg font-medium hover:bg-opacity-90 transition-colors">
+          <div className="-mt-4 flex flex-col items-center justify-center gap-4">
+            <button
+              type="button"
+              className="bg-[#1E4640] w-[350px] text-white p-3 rounded-xl py-3 text-lg font-medium hover:bg-opacity-90 transition-colors"
+              onClick={handleSignIn}
+              disabled={isLoading}
+            >
               Sign In
             </button>
             <div className="relative text-red-500">{error}</div>
+            <div className="relative text-green-600 text-center">
+              {successMessage}
+            </div>
           </div>
         </div>
       </>
