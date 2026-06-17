@@ -61,7 +61,7 @@ export const handleUpload = async (
 
   // Create a unique filename with original name and timestamp
   const timestamp = Date.now();
-  const newFileName = `${originalName}.${fileExtension}`;
+  const newFileName = `${originalName}-${timestamp}.${fileExtension}`;
 
   // Create storage reference with the new filename
   const storageRef = ref(storage, `uploads/${folderName}/${newFileName}`);
