@@ -86,6 +86,8 @@ interface FlashCardListProps {
   flashcards: Flashcard[];
   onEdit: (flashcard: Flashcard) => void;
   onDelete: (flashcard: Flashcard) => void;
+  selectedRowKeys: React.Key[];
+  onSelectionChange: (keys: React.Key[]) => void;
   loading?: boolean;
   onView: (flashcard: Flashcard) => void;
   pagination?: any;
@@ -96,6 +98,8 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
   flashcards,
   onEdit,
   onDelete,
+  selectedRowKeys,
+  onSelectionChange,
   loading,
   pagination,
   onPageChange = () => {},
@@ -203,12 +207,14 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
       render: (_: any, record: Flashcard) => (
         <Space size="middle">
           <Button
+            className="flashcard-row-action"
             type="text"
             icon={<EditOutlined />}
             onClick={() => onEdit(record)}
             title="Edit"
           />
           <Button
+            className="flashcard-row-action"
             type="text"
             danger
             icon={<DeleteOutlined />}
@@ -226,6 +232,10 @@ const FlashCardList: React.FC<FlashCardListProps> = ({
         columns={columns}
         dataSource={flashcards}
         rowKey="id"
+        rowSelection={{
+          selectedRowKeys,
+          onChange: onSelectionChange,
+        }}
         loading={loading}
         className="notes-table hide-scrollbar"
         rowClassName={() => "notes-table-row"}

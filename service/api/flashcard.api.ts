@@ -570,6 +570,11 @@ export const deleteFlashcard = async (flashcardId: string) => {
   }
 };
 
+export const deleteFlashcards = async (flashcardIds: string[]) => {
+  await Promise.all(flashcardIds.map((flashcardId) => deleteFlashcard(flashcardId)));
+  return { success: true };
+};
+
 // Get a single flashcard by ID
 export const getFlashcardById = async (flashcardId: string) => {
   try {

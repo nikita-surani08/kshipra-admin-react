@@ -49,13 +49,106 @@
   /* Hide scrollbars for AntD table body */
 .hide-scrollbar .ant-table-body {
   scrollbar-width: none; /* Firefox */
-  padding-left: 10px !important;
-  padding-right: 10px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 .notes-table .ant-table-pagination {
   margin: 12px 12px 8px !important;
   padding-bottom: 4px !important;
+}
+
+.notes-table .ant-table-selection-column {
+  width: 56px !important;
+  min-width: 56px !important;
+  padding: 8px 12px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.notes-table .ant-table-thead > tr > th.ant-table-selection-column,
+.notes-table .ant-table-tbody > tr > td.ant-table-selection-column {
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+}
+
+.notes-table .ant-table-thead > tr > th:last-child,
+.notes-table .ant-table-tbody > tr > td:last-child {
+  width: 108px !important;
+  min-width: 108px !important;
+  max-width: 108px !important;
+}
+
+.notes-table .ant-checkbox-wrapper,
+.notes-table .ant-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.notes-table .ant-checkbox-inner {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #9aa8a5;
+  border-radius: 5px;
+}
+
+.notes-table .ant-checkbox-checked .ant-checkbox-inner::after {
+  content: "";
+  position: absolute;
+  display: block;
+  box-sizing: border-box;
+  width: 5px;
+  height: 9px;
+  border-style: solid;
+  border-color: #ffffff;
+  border-width: 0 1.5px 1.5px 0;
+  opacity: 1;
+  inset-inline-start: 5px;
+  top: 2px;
+  transform: rotate(45deg);
+}
+
+.notes-table .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #1e4640 !important;
+  border-color: #1e4640 !important;
+}
+
+.notes-table .ant-checkbox-indeterminate .ant-checkbox-inner {
+  background-color: #ffffff !important;
+  border-color: #9aa8a5 !important;
+}
+
+.notes-table .ant-checkbox-indeterminate .ant-checkbox-inner::after {
+  display: none;
+}
+
+.notes-table .ant-table-row-selected > td {
+  background: #e8f1ef !important;
+}
+
+.notes-table .flashcard-row-action {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  font-size: 14px;
+}
+
+.notes-table .flashcard-row-action .anticon {
+  font-size: 14px;
+}
+
+.notes-table .ant-table-tbody > tr:hover > td {
+  background: #ffffff !important;
+}
+
+.notes-table .ant-table-tbody > tr.ant-table-row-selected:hover > td,
+.notes-table .ant-table-tbody > tr.ant-table-row-selected:hover > td.ant-table-cell-fix-right {
+  background: #e8f1ef !important;
 }
 
 /* Keep fixed right actions column above adjacent cells while horizontal scrolling */
@@ -67,6 +160,54 @@
 .notes-table .ant-table-tbody > tr > td.ant-table-cell-fix-right-last {
   background: #ffffff !important;
   z-index: 4 !important;
+}
+
+.notes-table .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell-fix-right,
+.notes-table .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell-fix-right-first,
+.notes-table .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell-fix-right-last {
+  background: #e8f1ef !important;
+}
+
+.flashcard-toolbar-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+  align-items: stretch;
+  white-space: nowrap;
+}
+
+.flashcard-bulk-action,
+.flashcard-add-action,
+.flashcard-upload-action {
+  box-sizing: border-box;
+  height: 50px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.flashcard-bulk-action {
+  width: 205px;
+}
+
+.flashcard-add-action {
+  width: 160px;
+}
+
+.flashcard-upload-action {
+  width: 160px;
+}
+
+.flashcard-toolbar-actions button:focus {
+  outline: none;
+}
+
+.flashcard-toolbar-actions button:focus-visible {
+  outline: 2px solid #8bb8ae;
+  outline-offset: 2px;
+}
+
+.flashcard-add-button {
+  white-space: nowrap;
 }
 
 

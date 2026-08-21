@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Work_Sans } from "next/font/google";
 import { Dropdown, Space, Button } from "antd";
-import { DownOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, DownOutlined, PlusOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import FlashCardList from "./FlashCardList";
 import AddFlashCardModal from "./AddFlashCardModal";
@@ -14,11 +14,13 @@ import "./flashcard.css";
 import {
   addFlashcard,
   deleteFlashcard,
+  deleteFlashcards,
   getFlashcardsBySubjectId,
   getFlashcardsByTopicId,
   updateFlashcard,
   uploadFlashcardsFromExcel,
 } from "@/service/api/flashcard.api";
+import type { Flashcard } from "@/service/api/flashcard.api";
 import UploadFlashCardModal from "./UploadCardModal";
 import { debounce } from "lodash";
 import SuccessAlert from "@/components/alerts/SuccessAlert";
@@ -38,6 +40,8 @@ const ManageFlashcards = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentFlashcard, setCurrentFlashcard] = useState<any>(null);
+  const [selectedFlashcards, setSelectedFlashcards] = useState<Flashcard[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -234,11 +238,13 @@ const ManageFlashcards = () => {
     setLastVisibleDocs({});
     setSelectedSubject(subjectId);
     setSelectedTopic(null);
+    setSelectedRowKeys([]);
   };
 
   // Handle topic change
   const handleTopicChange = (topicId: string) => {
     setSelectedTopic(topicId);
+    setSelectedRowKeys([]);
   };
 
   // Handle add flashcard
@@ -280,6 +286,7 @@ const ManageFlashcards = () => {
   };
 
   const handlePageChange = (page: number, pageSize?: number) => {
+    setSelectedRowKeys([]);
     setPagination((prev) => ({
       ...prev,
       page,
@@ -388,6 +395,45 @@ const ManageFlashcards = () => {
 
     fetchFlashcards(pagination.page, pagination.pageSize);
     setCurrentFlashcard(null);
+  };
+
+  const handleBulkDeleteFlashcards = (flashcards: Flashcard[]) => {
+    setSelectedFlashcards(flashcards);
+    setIsDeleteModalVisible(true);
+  };
+
+  const selectedTableFlashcards = flashcardList.filter((flashcard: Flashcard) =>
+    flashcard.id != null && selectedRowKeys.includes(String(flashcard.id) as React.Key)
+  );
+
+  const handleConfirmDelete = async () => {
+    if (selectedFlashcards.length > 0) {
+      try {
+        setLoading(true);
+        const selectedIds: string[] = selectedFlashcards
+          .map((flashcard) => flashcard.id)
+          .filter((id): id is string => typeof id === "string");
+        await deleteFlashcards(selectedIds);
+        setSuccessMessage(`${selectedFlashcards.length} flashcards deleted successfully.`);
+        setErrorMessage(null);
+        setIsSuccessAlertOpen(true);
+        setIsErrorAlertOpen(false);
+        setIsDeleteModalVisible(false);
+        setSelectedFlashcards([]);
+        await fetchFlashcards(pagination.page, pagination.pageSize);
+      } catch (error) {
+        console.error("Error deleting flashcards:", error);
+        setErrorMessage("Failed to delete selected flashcards.");
+        setSuccessMessage(null);
+        setIsErrorAlertOpen(true);
+        setIsSuccessAlertOpen(false);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    await handleDeleteFlashcard();
   };
 
   // Handle edit button click
@@ -542,8 +588,17 @@ const ManageFlashcards = () => {
               </Dropdown>
             </div>
 
-            <div className="relative h-[50px] flex gap-4">
-              <div className="shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-white transition-all duration-300 hover:-translate-y-0.2">
+            <div className="flashcard-toolbar-actions relative h-[50px] flex gap-3">
+              {selectedTableFlashcards.length > 0 && (
+                <button
+                  className="flashcard-bulk-action bg-[#1E4640] font-medium shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 cursor-pointer text-white rounded-xl items-center justify-center gap-2 flex transition-all duration-300 hover:-translate-y-0.2"
+                  onClick={() => handleBulkDeleteFlashcards(selectedTableFlashcards)}
+                >
+                  <DeleteOutlined />
+                  Delete Selected ({selectedTableFlashcards.length})
+                </button>
+              )}
+              <div className="flashcard-add-action shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-4 gap-2 cursor-pointer rounded-xl items-center justify-center flex bg-white transition-all duration-300 hover:-translate-y-0.2">
                 <Image
                   src="/images/plus.svg"
                   width={20}
@@ -551,14 +606,14 @@ const ManageFlashcards = () => {
                   alt="plus"
                 />
                 <button
-                  className="text-[#1E4640] font-medium"
+                  className="flashcard-add-button text-[#1E4640] font-medium"
                   onClick={() => setIsAddModalVisible(true)}
                 >
                   Add Flashcard
                 </button>
               </div>
               <button
-                className="bg-[#1E4640] font-medium shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-6 cursor-pointer text-white rounded-xl items-center justify-center flex transition-all duration-300 hover:-translate-y-0.2"
+                className="flashcard-upload-action bg-[#1E4640] font-medium shadow-[0px_0px_4px_0px_#1E464040] hover:shadow-[0px_2px_8px_0px_#1E464060] px-5 cursor-pointer text-white rounded-xl items-center justify-center flex transition-all duration-300 hover:-translate-y-0.2"
                 onClick={() => setIsUploadModalVisible(true)}
               >
                 Upload via CSV
@@ -590,9 +645,12 @@ const ManageFlashcards = () => {
             (flashcardList.length > 0 ? (
               <div className="w-full mt-4 h-full min-h-0 pb-2">
                 <FlashCardList
+                  key={`${selectedSubject}-${selectedTopic}-${pagination.page}`}
                   flashcards={flashcardList}
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
+                  selectedRowKeys={selectedRowKeys}
+                  onSelectionChange={setSelectedRowKeys}
                   onView={handleViewClick}
                   loading={loading}
                   pagination={pagination}
@@ -660,8 +718,10 @@ const ManageFlashcards = () => {
         onCancel={() => {
           setIsDeleteModalVisible(false);
           setCurrentFlashcard(null);
+          setSelectedFlashcards([]);
         }}
-        onConfirm={handleDeleteFlashcard}
+        onConfirm={handleConfirmDelete}
+        count={selectedFlashcards.length || 1}
       />
     </div>
   );

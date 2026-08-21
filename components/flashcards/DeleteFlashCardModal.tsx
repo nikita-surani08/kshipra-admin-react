@@ -9,6 +9,7 @@ interface DeleteFlashCardModalProps {
   onCancel: () => void;
   onConfirm: () => void;
   loading?: boolean;
+  count?: number;
 }
 
 const DeleteFlashCardModal: React.FC<DeleteFlashCardModalProps> = ({
@@ -16,6 +17,7 @@ const DeleteFlashCardModal: React.FC<DeleteFlashCardModalProps> = ({
   onCancel,
   onConfirm,
   loading,
+  count = 1,
 }) => {
   return (
     <Modal
@@ -29,12 +31,12 @@ const DeleteFlashCardModal: React.FC<DeleteFlashCardModalProps> = ({
       <div className={`${worksans.className} text-center`}>
         {/* TITLE */}
         <h2 className="text-[#1E4640] font-semibold text-2xl">
-          Delete Flashcard
+          {count > 1 ? "Delete Flashcards" : "Delete Flashcard"}
         </h2>
 
         {/* SUBTEXT */}
         <p className="text-[#667085] mt-3 text-base">
-          Are you sure you want to Delete this flashcard.
+          Are you sure you want to delete {count > 1 ? "these flashcards" : "this flashcard"}?
         </p>
 
         {/* BUTTONS */}
