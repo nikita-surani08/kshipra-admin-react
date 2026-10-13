@@ -420,6 +420,7 @@ const ManageFlashcards = () => {
         setIsErrorAlertOpen(false);
         setIsDeleteModalVisible(false);
         setSelectedFlashcards([]);
+        setSelectedRowKeys([]);
         await fetchFlashcards(pagination.page, pagination.pageSize);
       } catch (error) {
         console.error("Error deleting flashcards:", error);

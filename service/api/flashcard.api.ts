@@ -571,7 +571,123 @@ export const deleteFlashcard = async (flashcardId: string) => {
 };
 
 export const deleteFlashcards = async (flashcardIds: string[]) => {
-  await Promise.all(flashcardIds.map((flashcardId) => deleteFlashcard(flashcardId)));
+  const uniqueFlashcardIds = Array.from(new Set(flashcardIds.filter(Boolean)));
+  if (uniqueFlashcardIds.length === 0) {
+    return { success: true };
+  }
+
+  const nowIso = new Date().toISOString();
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const flashcardRefs = uniqueFlashcardIds.map((flashcardId) =>
+        doc(db, "flashcards", flashcardId)
+      );
+      const flashcardSnaps = await Promise.all(
+        flashcardRefs.map((flashcardRef) => tx.get(flashcardRef))
+      );
+
+      const flashcardsToDelete: Array<{
+        ref: (typeof flashcardRefs)[number];
+        topicId: string;
+        noteId: string;
+      }> = [];
+      const topicDeleteCounts = new Map<string, number>();
+      const noteDeleteCounts = new Map<string, number>();
+
+      flashcardSnaps.forEach((flashcardSnap, index) => {
+        if (!flashcardSnap.exists()) {
+          throw new Error("Flashcard not found");
+        }
+
+        const flashcardData = flashcardSnap.data();
+        if (flashcardData.is_active === false) {
+          return;
+        }
+
+        const topicId = flashcardData.topic_id;
+        const noteId = flashcardData.note_id;
+        if (!topicId || !noteId) {
+          throw new Error("Flashcard topic or note not found");
+        }
+
+        flashcardsToDelete.push({
+          ref: flashcardRefs[index],
+          topicId,
+          noteId,
+        });
+        topicDeleteCounts.set(topicId, (topicDeleteCounts.get(topicId) || 0) + 1);
+        noteDeleteCounts.set(noteId, (noteDeleteCounts.get(noteId) || 0) + 1);
+      });
+
+      const topicRefs = new Map(
+        Array.from(topicDeleteCounts.keys()).map((topicId) => [
+          topicId,
+          doc(db, "topics", topicId),
+        ])
+      );
+      const noteRefs = new Map(
+        Array.from(noteDeleteCounts.keys()).map((noteId) => [
+          noteId,
+          doc(db, "notes", noteId),
+        ])
+      );
+
+      const topicSnaps = await Promise.all(
+        Array.from(topicRefs.values()).map((topicRef) => tx.get(topicRef))
+      );
+      const noteSnaps = await Promise.all(
+        Array.from(noteRefs.values()).map((noteRef) => tx.get(noteRef))
+      );
+
+      const topicTotals = new Map<string, number>();
+      Array.from(topicRefs.keys()).forEach((topicId, index) => {
+        const topicSnap = topicSnaps[index];
+        if (!topicSnap.exists()) {
+          throw new Error("Topic not found");
+        }
+        topicTotals.set(topicId, topicSnap.data()?.total_flashcards || 0);
+      });
+
+      const noteTotals = new Map<string, number>();
+      Array.from(noteRefs.keys()).forEach((noteId, index) => {
+        const noteSnap = noteSnaps[index];
+        if (!noteSnap.exists()) {
+          throw new Error("Note not found");
+        }
+        noteTotals.set(noteId, noteSnap.data()?.total_flashcards || 0);
+      });
+
+      flashcardsToDelete.forEach(({ ref }) => {
+        tx.update(ref, {
+          is_active: false,
+          updated_at: nowIso,
+        });
+      });
+
+      topicDeleteCounts.forEach((deleteCount, topicId) => {
+        const topicRef = topicRefs.get(topicId);
+        if (!topicRef) return;
+        tx.update(topicRef, {
+          total_flashcards: Math.max(0, (topicTotals.get(topicId) || 0) - deleteCount),
+          updated_at: nowIso,
+        });
+      });
+
+      noteDeleteCounts.forEach((deleteCount, noteId) => {
+        const noteRef = noteRefs.get(noteId);
+        if (!noteRef) return;
+        tx.update(noteRef, {
+          total_flashcards: Math.max(0, (noteTotals.get(noteId) || 0) - deleteCount),
+          updated_at: nowIso,
+        });
+      });
+    });
+  } catch (error) {
+    console.error("Error deleting flashcards:", error);
+    throw new Error("Failed to delete flashcards");
+  }
+
   return { success: true };
 };
 
